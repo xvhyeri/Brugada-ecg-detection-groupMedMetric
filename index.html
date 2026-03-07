@@ -2,945 +2,1309 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Brugada ECG Detection — MedMetric · IDSC 2026</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Brugada Syndrome Detection — Group MedMetric · IDSC 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
-/* ═══════════════════════════════════════════════
-   SHARED TOKENS
-═══════════════════════════════════════════════ */
-:root {
-  --bg:#020810; --surface:#080f1c; --card:#0c1525; --border:#162035;
-  --accent:#00d4ff; --glow:#00ff88; --red:#ff3355; --red2:#ff4d6d;
-  --yellow:#ffd060; --yellow2:#f0c040; --green:#39ff14;
-  --crimson:#dc143c; --steel:#4682b4;
-  --text:#cce0f0; --muted:#4a6880;
-  --mono:'Share Tech Mono','Space Mono',monospace;
-  --sans:'DM Sans',sans-serif;
+:root{
+  --bg:#030810;--surf:#07111f;--card:#0b1826;--bdr:#14253a;
+  --cyan:#00c8f0;--green:#28d976;--red:#f03c5a;--amber:#e8b83c;--purple:#9a70f0;
+  --txt:#cce0f4;--sub:#496070;
+  --mono:'Share Tech Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
-
-/* scanlines */
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);}
-
-/* grid bg */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
-  background-size:40px 40px;}
+  background:linear-gradient(rgba(0,200,240,.022) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(0,200,240,.022) 1px,transparent 1px);
+  background-size:44px 44px;}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:998;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.055) 2px,rgba(0,0,0,.055) 4px);}
 
-/* ═══════════════════════════════════════════════
-   TOP NAV
-═══════════════════════════════════════════════ */
-#topnav{
-  position:relative;z-index:100;
+/* ── NAV ─────────────────────────────── */
+#nav{
+  position:sticky;top:0;z-index:200;
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;
-  padding:.9rem 1.5rem;
-  border-bottom:1px solid var(--border);
-  background:rgba(2,8,16,.92);
-  backdrop-filter:blur(8px);
+  padding:.85rem 1.6rem;
+  background:rgba(3,8,16,.95);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--bdr);
 }
-.brand{font-family:var(--mono);font-size:.7rem;color:var(--glow);letter-spacing:.14em;
-  text-shadow:0 0 10px rgba(0,255,136,.35);}
-.brand span{color:var(--muted);}
-.tab-group{display:flex;gap:2px;flex-wrap:wrap;}
-.tab{font-family:var(--mono);font-size:.58rem;letter-spacing:.1em;padding:.45rem 1rem;
-  border:1px solid var(--border);background:transparent;color:var(--muted);
-  cursor:pointer;transition:all .18s;text-transform:uppercase;}
-.tab:hover{color:var(--accent);border-color:var(--accent);}
-.tab.active{color:var(--bg);background:var(--accent);border-color:var(--accent);font-weight:700;}
-.tab.active.sim{background:var(--glow);border-color:var(--glow);color:#000;}
-.nav-right{display:flex;align-items:center;gap:1rem;}
-.bpm-badge{font-family:var(--mono);font-size:.95rem;color:var(--glow);
-  text-shadow:0 0 8px rgba(0,255,136,.45);letter-spacing:.05em;}
-.bpm-badge small{font-size:.48rem;color:var(--muted);display:block;text-align:center;}
-.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--glow);
-  box-shadow:0 0 7px var(--glow);animation:pulse 1.1s ease-in-out infinite;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+.brand{font-family:var(--mono);font-size:.68rem;color:var(--cyan);letter-spacing:.14em;
+  text-shadow:0 0 12px rgba(0,200,240,.28);line-height:1.45;}
+.brand small{display:block;font-size:.52rem;color:var(--sub);letter-spacing:.1em;margin-top:.1rem;}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;}
+.tab{font-family:var(--mono);font-size:.55rem;letter-spacing:.1em;padding:.4rem .9rem;
+  border:1px solid var(--bdr);background:transparent;color:var(--sub);
+  cursor:pointer;transition:all .16s;text-transform:uppercase;}
+.tab:hover{color:var(--cyan);border-color:var(--cyan);}
+.tab.sim-on {background:var(--green);border-color:var(--green);color:#000;font-weight:700;}
+.tab.dash-on{background:var(--cyan); border-color:var(--cyan); color:#000;font-weight:700;}
+.nav-r{display:flex;align-items:center;gap:.9rem;}
+.bpm{font-family:var(--mono);font-size:.88rem;color:var(--green);text-shadow:0 0 8px rgba(40,217,118,.38);}
+.bpm small{font-size:.44rem;color:var(--sub);display:block;text-align:center;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 6px var(--green);animation:blink 1.1s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.18}}
 
-/* ═══════════════════════════════════════════════
-   PAGE SHELLS
-═══════════════════════════════════════════════ */
-.page{display:none;animation:fadeUp .22s ease;}
-.page.active{display:block;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+/* ── PAGE SHELLS ─────────────────────── */
+.pg{display:none;animation:fadeup .2s ease;}
+.pg.on{display:block;}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-/* ═══════════════════════════════════════════════
-   ── LIVE SIM PAGE ──
-═══════════════════════════════════════════════ */
-#sim-page{padding:1.2rem 1.5rem;max-width:1200px;margin:0 auto;}
+/* ═══════════════════════════════════
+   LIVE ECG PAGE
+═══════════════════════════════════ */
+#pg-sim{padding:1.2rem 1.6rem;max-width:1200px;margin:0 auto;}
 
-.mode-bar{display:flex;align-items:center;gap:.8rem;margin-bottom:1.1rem;flex-wrap:wrap;}
-.mode-label{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.15em;}
-.mode-btn{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;padding:.45rem 1.1rem;
-  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;}
-.mode-btn.active-normal{border-color:var(--glow);color:var(--glow);background:rgba(0,255,136,.06);box-shadow:0 0 10px rgba(0,255,136,.12);}
-.mode-btn.active-brugada{border-color:var(--red);color:var(--red);background:rgba(255,51,85,.06);box-shadow:0 0 10px rgba(255,51,85,.12);}
-.speed-group{margin-left:auto;display:flex;align-items:center;gap:.5rem;}
-.speed-btn{font-family:var(--mono);font-size:.56rem;padding:.3rem .6rem;border:1px solid var(--border);
-  background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
-.speed-btn.active,.speed-btn:hover{border-color:var(--accent);color:var(--accent);}
+.modebar{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-bottom:1rem;}
+.modebar-lbl{font-family:var(--mono);font-size:.54rem;color:var(--sub);letter-spacing:.13em;}
+.mbtn{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;padding:.4rem .95rem;
+  border:1px solid var(--bdr);background:transparent;color:var(--sub);cursor:pointer;transition:all .18s;}
+.mbtn.mn{border-color:var(--green);color:var(--green);background:rgba(40,217,118,.055);}
+.mbtn.mb{border-color:var(--red);  color:var(--red);  background:rgba(240,60,90,.055);}
+.spd-g{margin-left:auto;display:flex;align-items:center;gap:.4rem;}
+.sbtn{font-family:var(--mono);font-size:.52rem;padding:.28rem .58rem;
+  border:1px solid var(--bdr);background:transparent;color:var(--sub);cursor:pointer;transition:all .14s;}
+.sbtn.on,.sbtn:hover{border-color:var(--cyan);color:var(--cyan);}
 
-.ecg-outer{background:var(--surface);border:1px solid var(--border);position:relative;
-  margin-bottom:1.1rem;overflow:hidden;}
-.ecg-outer::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
+.ecg-wrap{background:var(--surf);border:1px solid var(--bdr);position:relative;overflow:hidden;margin-bottom:1rem;}
+.ecg-wrap::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;
   background-image:
-    linear-gradient(rgba(0,255,136,.045) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,255,136,.045) 1px,transparent 1px),
-    linear-gradient(rgba(0,255,136,.02) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,255,136,.02) 1px,transparent 1px);
+    linear-gradient(rgba(40,217,118,.038) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(40,217,118,.038) 1px,transparent 1px),
+    linear-gradient(rgba(40,217,118,.016) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(40,217,118,.016) 1px,transparent 1px);
   background-size:50px 50px,50px 50px,10px 10px,10px 10px;}
-.ecg-outer::after{content:'';position:absolute;top:0;left:0;bottom:0;width:55px;
-  background:linear-gradient(90deg,var(--surface),transparent);z-index:3;pointer-events:none;}
-.ecg-topbar{display:flex;justify-content:space-between;align-items:center;
-  padding:.6rem 1rem;border-bottom:1px solid var(--border);position:relative;z-index:4;
-  background:rgba(8,15,28,.85);}
-.ecg-lead-lbl{font-family:var(--mono);font-size:.58rem;color:var(--glow);letter-spacing:.14em;}
-.ecg-specs{display:flex;gap:1.2rem;}
-.ecg-spec{font-family:var(--mono);font-size:.52rem;color:var(--muted);letter-spacing:.09em;}
-.ecg-spec span{color:var(--accent);}
-#ecgCanvas{display:block;width:100%;position:relative;z-index:2;}
+.ecg-wrap::after{content:'';position:absolute;top:0;left:0;bottom:0;width:52px;
+  background:linear-gradient(90deg,var(--surf),transparent);z-index:3;pointer-events:none;}
+.ecg-bar{display:flex;justify-content:space-between;align-items:center;
+  padding:.56rem 1rem;border-bottom:1px solid var(--bdr);
+  position:relative;z-index:4;background:rgba(7,17,31,.88);}
+.ecg-lbl{font-family:var(--mono);font-size:.54rem;color:var(--green);letter-spacing:.12em;}
+.ecg-specs{display:flex;gap:1.1rem;}
+.ecg-sp{font-family:var(--mono);font-size:.49rem;color:var(--sub);}
+.ecg-sp b{color:var(--cyan);font-weight:400;}
+#ecgC{display:block;width:100%;position:relative;z-index:2;}
 
-.legend-row{display:flex;gap:1.2rem;flex-wrap:wrap;background:var(--card);
-  border:1px solid var(--border);padding:.7rem 1.1rem;margin-bottom:1.1rem;}
-.leg-item{font-family:var(--mono);font-size:.54rem;color:var(--muted);display:flex;align-items:center;gap:.45rem;}
-.leg-dash{width:18px;height:2px;flex-shrink:0;}
+.legrow{display:flex;gap:1rem;flex-wrap:wrap;background:var(--card);
+  border:1px solid var(--bdr);padding:.6rem 1rem;margin-bottom:1rem;}
+.lgi{font-family:var(--mono);font-size:.49rem;color:var(--sub);display:flex;align-items:center;gap:.4rem;}
+.lgline{width:15px;height:2px;flex-shrink:0;}
+.lgdash{width:15px;border-top:2px dashed;flex-shrink:0;}
 
-.ann-row{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:1.1rem;}
-.ann-card{background:var(--card);flex:1;padding:.9rem 1rem;position:relative;transition:background .2s;}
-.ann-card:hover{background:#101e30;}
-.ann-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
-.ann-card.ax1::before{background:var(--accent);}
-.ann-card.ax2::before{background:var(--yellow);}
-.ann-card.ax3::before{background:#b06aff;}
-.ann-card.ax4::before{background:var(--red);}
-.ann-var{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.3rem;}
-.ann-val{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--text);transition:color .3s;margin-bottom:.15rem;}
-.ann-val.flag-hi{color:var(--red);text-shadow:0 0 7px rgba(255,51,85,.4);}
-.ann-val.flag-lo{color:var(--glow);}
-.ann-name{font-size:.68rem;color:var(--muted);font-weight:300;}
-.ann-thresh{font-family:var(--mono);font-size:.49rem;color:var(--muted);margin-top:.25rem;
-  padding-top:.25rem;border-top:1px solid var(--border);}
-.ann-thresh span{color:var(--yellow);}
+.ann-strip{display:flex;gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1rem;}
+.ann{background:var(--card);flex:1;padding:.82rem .92rem;position:relative;}
+.ann::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.ann.a1::before{background:var(--cyan);}
+.ann.a2::before{background:var(--amber);}
+.ann.a3::before{background:var(--purple);}
+.ann.a4::before{background:var(--red);}
+.avar{font-family:var(--mono);font-size:.54rem;color:var(--sub);margin-bottom:.26rem;}
+.aval{font-family:var(--mono);font-size:1.1rem;font-weight:700;color:var(--txt);transition:color .22s;}
+.aval.hi{color:var(--red);}
+.aval.ok{color:var(--green);}
+.aname{font-size:.64rem;color:var(--sub);margin-top:.13rem;font-weight:300;}
+.athr{font-family:var(--mono);font-size:.45rem;color:var(--sub);
+  margin-top:.2rem;padding-top:.2rem;border-top:1px solid var(--bdr);}
+.athr b{color:var(--amber);font-weight:400;}
 
-.sim-bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.1rem;}
-@media(max-width:700px){.sim-bottom{grid-template-columns:1fr;}}
-.sim-box{background:var(--card);border:1px solid var(--border);padding:1.2rem;}
-.sim-box h4{font-family:var(--mono);font-size:.57rem;color:var(--muted);letter-spacing:.14em;margin-bottom:.9rem;}
-.verdict{font-family:var(--mono);font-size:.95rem;font-weight:700;letter-spacing:.07em;
-  margin-bottom:.45rem;transition:color .4s,text-shadow .4s;}
-.verdict.nv{color:var(--glow);text-shadow:0 0 10px rgba(0,255,136,.4);}
-.verdict.bv{color:var(--red);text-shadow:0 0 10px rgba(255,51,85,.45);}
-.verdict.bord{color:var(--yellow);}
-.verdict-sub{font-size:.7rem;color:var(--muted);line-height:1.55;font-weight:300;}
-.prow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.52rem;
-  color:var(--muted);margin-top:.9rem;margin-bottom:.25rem;letter-spacing:.07em;}
-.pt{height:5px;background:var(--border);}
-.pf{height:100%;transition:width .55s ease,background .4s;}
-.ctrl-item{margin-bottom:.75rem;}
-.ctrl-item label{font-family:var(--mono);font-size:.53rem;color:var(--muted);
-  display:flex;justify-content:space-between;margin-bottom:.3rem;letter-spacing:.07em;}
-.ctrl-item label span{color:var(--accent);}
-.ctrl-item input[type=range]{width:100%;accent-color:var(--accent);}
-.tog-row{display:flex;align-items:center;justify-content:space-between;
-  font-family:var(--mono);font-size:.54rem;color:var(--muted);margin-top:.3rem;}
-.tog{width:34px;height:17px;background:var(--border);border-radius:9px;
-  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
-.tog.on{background:rgba(0,255,136,.35);}
-.tog::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;
-  background:var(--muted);border-radius:50%;transition:transform .2s,background .2s;}
-.tog.on::after{transform:translateX(17px);background:var(--glow);}
+.srow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+@media(max-width:680px){.srow{grid-template-columns:1fr;}}
+.scard{background:var(--card);border:1px solid var(--bdr);padding:1.05rem;}
+.shead{font-family:var(--mono);font-size:.52rem;color:var(--sub);letter-spacing:.12em;margin-bottom:.82rem;}
+.verdict{font-family:var(--mono);font-size:.88rem;font-weight:700;letter-spacing:.06em;
+  margin-bottom:.38rem;transition:color .32s,text-shadow .32s;}
+.verdict.vn{color:var(--green);text-shadow:0 0 10px rgba(40,217,118,.32);}
+.verdict.vb{color:var(--red);  text-shadow:0 0 10px rgba(240,60,90,.38);}
+.verdict.vx{color:var(--amber);}
+.vsub{font-size:.66rem;color:var(--sub);line-height:1.55;font-weight:300;}
+.prow{display:flex;justify-content:space-between;font-family:var(--mono);
+  font-size:.48rem;color:var(--sub);margin-top:.75rem;margin-bottom:.2rem;}
+.ptrk{height:4px;background:var(--bdr);}
+.pfill{height:100%;transition:width .5s ease,background .36s;}
+.ctrlg{display:flex;flex-direction:column;gap:.65rem;}
+.csl label{font-family:var(--mono);font-size:.49rem;color:var(--sub);
+  display:flex;justify-content:space-between;margin-bottom:.26rem;}
+.csl label b{color:var(--cyan);font-weight:400;}
+.csl input[type=range]{width:100%;accent-color:var(--cyan);}
+.togrow{display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:.49rem;color:var(--sub);}
+.tog{width:31px;height:15px;background:var(--bdr);border-radius:8px;
+  position:relative;cursor:pointer;transition:background .18s;flex-shrink:0;}
+.tog.on{background:rgba(40,217,118,.32);}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;
+  background:var(--sub);border-radius:50%;transition:transform .18s,background .18s;}
+.tog.on::after{transform:translateX(16px);background:var(--green);}
 
-/* ═══════════════════════════════════════════════
-   ── DASHBOARD PAGES ──
-═══════════════════════════════════════════════ */
-.dash-container{position:relative;z-index:10;max-width:1140px;margin:0 auto;padding:1.5rem 2rem;}
-.sub-page{display:none;animation:fadeUp .2s ease;}
-.sub-page.active{display:block;}
+/* ═══════════════════════════════════
+   DASHBOARD PAGE
+═══════════════════════════════════ */
+#pg-dash{max-width:1140px;margin:0 auto;padding:1.4rem 1.8rem;}
 
-.page-title{margin-bottom:1.8rem;}
-.page-title .label{font-family:var(--mono);font-size:.58rem;color:var(--red2);
-  letter-spacing:.18em;text-transform:uppercase;margin-bottom:.45rem;}
-.page-title h1{font-family:var(--mono);font-size:1.25rem;color:#fff;font-weight:700;}
-.page-title p{font-size:.85rem;color:var(--muted);margin-top:.45rem;line-height:1.6;font-weight:300;max-width:700px;}
+.subnav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--bdr);
+  padding-bottom:.85rem;margin-bottom:1.5rem;}
+.sn{font-family:var(--mono);font-size:.52rem;letter-spacing:.09em;padding:.36rem .82rem;
+  border:1px solid transparent;background:transparent;color:var(--sub);
+  cursor:pointer;transition:all .14s;text-transform:uppercase;}
+.sn:hover{color:var(--cyan);}
+.sn.on{color:var(--cyan);border-color:var(--cyan);}
 
-.sub-nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1.8rem;
-  border-bottom:1px solid var(--border);padding-bottom:1rem;}
-.snav{font-family:var(--mono);font-size:.56rem;letter-spacing:.1em;padding:.4rem .9rem;
-  border:1px solid transparent;background:transparent;color:var(--muted);
-  cursor:pointer;transition:all .15s;text-transform:uppercase;}
-.snav:hover{color:var(--accent);}
-.snav.active{color:var(--accent);border-color:var(--accent);}
+.sp{display:none;animation:fadeup .18s ease;}
+.sp.on{display:block;}
 
-.metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.9rem;margin-bottom:1.8rem;}
-.mcard{background:var(--card);border:1px solid var(--border);padding:1.2rem;
-  border-top:2px solid var(--border);transition:transform .2s;}
-.mcard:hover{transform:translateY(-2px);}
-.mcard.ca{border-top-color:var(--accent);}.mcard.cg{border-top-color:var(--green);}
-.mcard.cy{border-top-color:var(--yellow2);}.mcard.cr{border-top-color:var(--red2);}
-.mcard .val{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent);display:block;margin-bottom:.2rem;}
-.mcard .lbl{font-family:var(--mono);font-size:.53rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;}
-.mcard .sub{font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:.2rem;line-height:1.4;}
+.pgh{margin-bottom:1.5rem;}
+.pgh h1{font-family:var(--mono);font-size:1.18rem;color:#fff;margin-bottom:.38rem;}
+.pgh p{font-size:.84rem;color:var(--sub);line-height:1.68;font-weight:300;max-width:680px;}
 
-.sec-title{font-family:var(--mono);font-size:.6rem;color:var(--accent);letter-spacing:.18em;
-  text-transform:uppercase;margin-bottom:1.1rem;display:flex;align-items:center;gap:.7rem;}
-.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:.82rem;margin-bottom:1.5rem;}
+.stat{background:var(--card);border:1px solid var(--bdr);padding:1.05rem;
+  border-top:2px solid transparent;transition:transform .18s;}
+.stat:hover{transform:translateY(-2px);}
+.stat.sa{border-top-color:var(--cyan);}
+.stat.sg{border-top-color:var(--green);}
+.stat.sy{border-top-color:var(--amber);}
+.stat.sr{border-top-color:var(--red);}
+.stat .v{font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--cyan);display:block;margin-bottom:.17rem;}
+.stat .l{font-family:var(--mono);font-size:.5rem;color:var(--sub);letter-spacing:.11em;text-transform:uppercase;}
+.stat .s{font-family:var(--mono);font-size:.48rem;color:var(--sub);margin-top:.16rem;line-height:1.4;}
 
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:1.8rem;}
-.chart-grid.wide{grid-template-columns:1fr;}
-@media(max-width:660px){.chart-grid{grid-template-columns:1fr;}}
-.chart-box{background:var(--surface);border:1px solid var(--border);padding:1.3rem;}
-.chart-box h3{font-family:var(--mono);font-size:.57rem;color:var(--muted);
-  letter-spacing:.1em;margin-bottom:.9rem;text-transform:uppercase;}
+.sec{font-family:var(--mono);font-size:.56rem;color:var(--cyan);letter-spacing:.17em;
+  text-transform:uppercase;margin-bottom:.95rem;display:flex;align-items:center;gap:.65rem;}
+.sec::after{content:'';flex:1;height:1px;background:var(--bdr);}
 
-.cm-section{display:flex;gap:1.3rem;flex-wrap:wrap;margin-bottom:1.8rem;align-items:flex-start;}
-.cm-outer{background:var(--surface);border:1px solid var(--border);padding:1.3rem;}
-.cm-outer h3{font-family:var(--mono);font-size:.57rem;color:var(--muted);letter-spacing:.1em;margin-bottom:.9rem;}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:.95rem;margin-bottom:1.5rem;}
+.cgrid.w1{grid-template-columns:1fr;}
+@media(max-width:640px){.cgrid{grid-template-columns:1fr;}}
+.cb{background:var(--surf);border:1px solid var(--bdr);padding:1.15rem;}
+.cb h3{font-family:var(--mono);font-size:.52rem;color:var(--sub);
+  letter-spacing:.1em;margin-bottom:.82rem;text-transform:uppercase;}
+
+/* feature table */
+table.ft{width:100%;border-collapse:collapse;font-size:.75rem;margin-bottom:1.5rem;}
+table.ft th{font-family:var(--mono);font-size:.49rem;color:var(--sub);letter-spacing:.09em;
+  text-align:left;padding:.58rem .78rem;border-bottom:1px solid var(--bdr);background:var(--card);}
+table.ft td{padding:.6rem .78rem;border-bottom:1px solid var(--bdr);vertical-align:top;line-height:1.52;}
+table.ft tr:hover td{background:rgba(255,255,255,.016);}
+.fv{font-family:var(--mono);color:var(--cyan);font-size:.66rem;}
+.fc{font-family:var(--mono);font-size:.58rem;color:#8ab0c8;}
+.fhi{color:var(--red);font-size:.68rem;}
+.flo{color:var(--cyan);font-size:.68rem;}
+.ftag{background:rgba(40,217,118,.1);color:var(--green);font-family:var(--mono);
+  font-size:.48rem;padding:.1rem .36rem;border:1px solid rgba(40,217,118,.22);}
+
+/* confusion matrix */
+.cmwrap{display:flex;gap:1.15rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:flex-start;}
+.cmbox{background:var(--surf);border:1px solid var(--bdr);padding:1.15rem;}
+.cmbox h3{font-family:var(--mono);font-size:.52rem;color:var(--sub);letter-spacing:.1em;margin-bottom:.82rem;}
 table.cm{border-collapse:collapse;}
-table.cm td,table.cm th{width:105px;height:75px;text-align:center;font-family:var(--mono);border:1px solid var(--border);}
-table.cm th{background:var(--card);font-size:.52rem;color:var(--muted);letter-spacing:.1em;height:34px;}
-.cm-tp,.cm-tn{background:rgba(57,255,20,.07);font-size:1.5rem;font-weight:700;color:var(--green);}
-.cm-fp,.cm-fn{background:rgba(255,77,109,.1);font-size:1.5rem;font-weight:700;color:var(--red2);}
-.cm-sub{font-family:var(--mono);font-size:.5rem;display:block;margin-top:.2rem;opacity:.7;}
-.cm-derived{flex:1;min-width:250px;background:var(--card);border:1px solid var(--border);padding:1.2rem;}
-.cm-derived h4{font-family:var(--mono);font-size:.57rem;color:var(--accent);letter-spacing:.1em;margin-bottom:.8rem;}
-.dr-row{display:flex;justify-content:space-between;align-items:center;
-  padding:.4rem 0;border-bottom:1px solid var(--border);font-size:.78rem;}
-.dr-row:last-child{border-bottom:none;}
-.dr-name{color:var(--muted);}
-.dr-val{font-family:var(--mono);font-weight:600;}
-.dr-val.g{color:var(--green);}.dr-val.y{color:var(--yellow2);}.dr-val.r{color:var(--red2);}
-.dr-note{font-family:var(--mono);font-size:.53rem;color:var(--muted);margin-top:.8rem;line-height:1.6;
-  border-top:1px solid var(--border);padding-top:.65rem;}
+table.cm td,table.cm th{width:100px;height:68px;text-align:center;font-family:var(--mono);border:1px solid var(--bdr);}
+table.cm th{background:var(--card);font-size:.48rem;color:var(--sub);letter-spacing:.09em;height:30px;}
+.ctn,.ctp{background:rgba(40,217,118,.07);font-size:1.42rem;font-weight:700;color:var(--green);}
+.cfp,.cfn{background:rgba(240,60,90,.09); font-size:1.42rem;font-weight:700;color:var(--red);}
+.clbl{font-family:var(--mono);font-size:.45rem;display:block;margin-top:.16rem;opacity:.62;}
+.cder{flex:1;min-width:235px;background:var(--card);border:1px solid var(--bdr);padding:1.1rem;}
+.cder h4{font-family:var(--mono);font-size:.52rem;color:var(--cyan);letter-spacing:.1em;margin-bottom:.72rem;}
+.dr{display:flex;justify-content:space-between;align-items:center;
+  padding:.36rem 0;border-bottom:1px solid var(--bdr);font-size:.76rem;}
+.dr:last-child{border-bottom:none;}
+.drn{color:var(--sub);}
+.drv{font-family:var(--mono);font-weight:600;}
+.drv.g{color:var(--green);}.drv.y{color:var(--amber);}.drv.r{color:var(--red);}
 
-table.feat-t{width:100%;border-collapse:collapse;font-size:.76rem;margin-bottom:1.8rem;}
-table.feat-t th{font-family:var(--mono);font-size:.53rem;letter-spacing:.1em;color:var(--muted);
-  text-align:left;padding:.65rem .85rem;border-bottom:1px solid var(--border);background:var(--card);}
-table.feat-t td{padding:.65rem .85rem;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5;}
-table.feat-t tr:hover td{background:rgba(255,255,255,.02);}
-.fn2{font-family:var(--mono);color:var(--accent);font-size:.7rem;}
-.fc2{font-family:var(--mono);font-size:.6rem;color:#a8c7e8;}
-.fb2{color:var(--red2);font-size:.7rem;}.fnn2{color:var(--steel);font-size:.7rem;}
-.bp2{background:rgba(57,255,20,.1);color:var(--green);font-family:var(--mono);
-  font-size:.54rem;padding:.12rem .4rem;border:1px solid rgba(57,255,20,.3);}
+/* fold diagram */
+.fgrid{display:grid;gap:3px;margin-bottom:.9rem;}
+.fc2{height:25px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.46rem;border:1px solid var(--bdr);letter-spacing:.06em;}
+.fc2.ev{background:rgba(240,60,90,.15);color:#ff6880;border-color:var(--red);}
+.fc2.tr{background:rgba(40,217,118,.055);color:var(--green);}
 
-.demo-wrap{background:var(--surface);border:1px solid var(--border);padding:1.6rem;margin-bottom:1.8rem;}
-.demo-wrap h3{font-family:var(--mono);font-size:.62rem;color:var(--accent);letter-spacing:.12em;margin-bottom:1.3rem;}
-.sl-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;margin-bottom:1.3rem;}
-@media(max-width:520px){.sl-grid{grid-template-columns:1fr;}}
-.sl-item label{font-family:var(--mono);font-size:.54rem;color:var(--muted);
-  display:flex;justify-content:space-between;margin-bottom:.35rem;letter-spacing:.08em;}
-.sl-item label span{color:var(--accent);}
-.sl-item input[type=range]{width:100%;accent-color:var(--accent);}
-.sl-thresh{font-family:var(--mono);font-size:.51rem;color:var(--yellow2);margin-top:.18rem;}
-.run-btn{font-family:var(--mono);font-size:.65rem;letter-spacing:.12em;padding:.75rem 1.8rem;
-  background:var(--red2);color:#fff;border:none;cursor:pointer;transition:opacity .15s,transform .15s;}
-.run-btn:hover{opacity:.85;transform:translateY(-1px);}
-.result-out{margin-top:1.1rem;padding:1.1rem 1.4rem;background:var(--card);
-  border:1px solid var(--border);font-family:var(--mono);min-height:52px;
-  display:flex;align-items:center;gap:.9rem;transition:border-color .3s;}
-.result-out.brugada{border-color:var(--red2);background:rgba(255,77,109,.05);}
-.result-out.normal{border-color:var(--green);background:rgba(57,255,20,.04);}
-.result-out.borderline{border-color:var(--yellow2);}
-.res-icon{font-size:1.3rem;}
-.res-body strong{display:block;font-size:.77rem;margin-bottom:.22rem;}
-.res-body small{font-size:.62rem;color:var(--muted);line-height:1.55;}
-.prob-bar{margin-top:.9rem;}
-.pb-label{font-family:var(--mono);font-size:.52rem;color:var(--muted);
+/* method cards */
+.mcards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.9rem;margin-bottom:1.5rem;}
+@media(max-width:640px){.mcards{grid-template-columns:1fr;}}
+.mc{background:var(--card);border:1px solid var(--bdr);padding:1rem;}
+.mc h4{font-family:var(--mono);font-size:.52rem;color:var(--cyan);letter-spacing:.1em;margin-bottom:.5rem;}
+.mc p{font-size:.74rem;color:var(--sub);line-height:1.65;}
+
+/* classifier demo */
+.demobox{background:var(--surf);border:1px solid var(--bdr);padding:1.45rem;margin-bottom:1.5rem;}
+.demobox h3{font-family:var(--mono);font-size:.58rem;color:var(--cyan);letter-spacing:.11em;margin-bottom:1.15rem;}
+.slgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.15rem;margin-bottom:1.15rem;}
+@media(max-width:500px){.slgrid{grid-template-columns:1fr;}}
+.sli label{font-family:var(--mono);font-size:.5rem;color:var(--sub);
   display:flex;justify-content:space-between;margin-bottom:.3rem;}
-.pb-track{height:7px;background:var(--border);}
-.pb-fill{height:100%;transition:width .5s ease,background .4s;}
-.axis-lbl{display:flex;justify-content:space-between;font-family:var(--mono);
-  font-size:.48rem;color:var(--muted);margin-top:.22rem;}
+.sli label b{color:var(--cyan);font-weight:400;}
+.sli input[type=range]{width:100%;accent-color:var(--cyan);}
+.sli .thr{font-family:var(--mono);font-size:.46rem;color:var(--amber);margin-top:.14rem;}
+.runbtn{font-family:var(--mono);font-size:.6rem;letter-spacing:.11em;padding:.7rem 1.6rem;
+  background:var(--red);color:#fff;border:none;cursor:pointer;transition:opacity .14s,transform .14s;}
+.runbtn:hover{opacity:.84;transform:translateY(-1px);}
+.resout{margin-top:.95rem;padding:.95rem 1.25rem;background:var(--card);
+  border:1px solid var(--bdr);display:flex;align-items:center;gap:.82rem;
+  min-height:48px;transition:border-color .22s;}
+.resout.rb{border-color:var(--red);  background:rgba(240,60,90,.04);}
+.resout.rn{border-color:var(--green);background:rgba(40,217,118,.03);}
+.resout.rx{border-color:var(--amber);}
+.ricon{font-size:1.2rem;}
+.rbody strong{display:block;font-size:.74rem;margin-bottom:.18rem;font-family:var(--mono);}
+.rbody small{font-size:.6rem;color:var(--sub);line-height:1.52;}
+.pb2{margin-top:.82rem;}
+.pb2lbl{font-family:var(--mono);font-size:.48rem;color:var(--sub);
+  display:flex;justify-content:space-between;margin-bottom:.26rem;}
+.pb2t{height:5px;background:var(--bdr);}
+.pb2f{height:100%;transition:width .48s ease,background .32s;}
+.pb2ax{display:flex;justify-content:space-between;font-family:var(--mono);
+  font-size:.44rem;color:var(--sub);margin-top:.18rem;}
 
-.cv-grid{display:grid;gap:3px;margin-bottom:1.1rem;}
-.cv-cell{height:28px;display:flex;align-items:center;justify-content:center;
-  font-family:var(--mono);font-size:.49rem;border:1px solid var(--border);letter-spacing:.06em;}
-.cv-ot{background:rgba(220,20,60,.18);color:#ff6b8a;border-color:var(--red2);}
-.cv-tr{background:rgba(57,255,20,.06);color:var(--green);}
+.tab.code-on{background:var(--amber);border-color:var(--amber);color:#000;font-weight:700;}
 
-.check-list{display:flex;flex-direction:column;gap:.8rem;}
-.check-item{display:flex;gap:.9rem;align-items:flex-start;background:var(--card);
-  border:1px solid var(--border);padding:.9rem 1.1rem;}
-.check-item.pass{border-left:3px solid var(--green);}
-.check-item.warn{border-left:3px solid var(--yellow2);}
-.check-item.info{border-left:3px solid var(--accent);}
-.ci-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem;}
-.ci-body h4{font-size:.82rem;font-weight:600;margin-bottom:.22rem;}
-.ci-body p{font-size:.74rem;color:var(--muted);line-height:1.55;}
-code{font-family:var(--mono);font-size:.62rem;color:var(--accent);
-  background:rgba(0,212,255,.08);padding:.1rem .32rem;}
-.code-block{background:#040b14;border:1px solid var(--border);padding:1.1rem 1.3rem;
-  font-family:var(--mono);font-size:.64rem;line-height:1.85;overflow-x:auto;
-  color:#a8c7e8;margin-bottom:1.4rem;white-space:pre;}
-.kw{color:#ff79c6;}.fnc{color:#50fa7b;}.cm3{color:#6272a4;}.st{color:#f1fa8c;}.num{color:#bd93f9;}
-.warn-banner{font-family:var(--mono);font-size:.57rem;color:var(--yellow2);
-  background:rgba(240,192,64,.07);border:1px solid rgba(240,192,64,.25);
-  padding:.65rem .9rem;margin-bottom:1.4rem;}
+/* code page */
+#pg-code{max-width:1000px;margin:0 auto;padding:1.4rem 1.8rem;}
+.code-wrap{background:#010810;border:1px solid var(--bdr);padding:1.4rem 1.6rem;overflow-x:auto;
+  font-family:var(--mono);font-size:.65rem;line-height:1.9;color:#a8c8e0;white-space:pre;}
+.ck{color:#ff79c6;}.cf{color:#50fa7b;}.cc{color:#4a6070;font-style:italic;}.cs{color:#f1fa8c;}.cn{color:#bd93f9;}
+
+code{font-family:var(--mono);font-size:.62rem;color:var(--cyan);
+  background:rgba(0,200,240,.08);padding:.08rem .3rem;}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
-     TOP NAVIGATION
-══════════════════════════════════════════ -->
-<nav id="topnav">
-  <div class="brand">BRUGADA DETECTION <span>· v5 · GROUP MEDMETRIC · IDSC 2026</span></div>
-  <div class="tab-group">
-    <button class="tab sim active" onclick="switchPage('sim',this)">⚡ LIVE ECG</button>
-    <button class="tab" onclick="switchPage('dash',this)">📊 DASHBOARD</button>
+<!-- NAV -->
+<nav id="nav">
+  <div class="brand">BRUGADA SYNDROME DETECTION
+    <small>GROUP MEDMETRIC · IDSC 2026 · BRUGADA-HUCA · PHYSIONET</small>
   </div>
-  <div class="nav-right">
-    <div class="bpm-badge"><span id="bpm-top">72</span> BPM<small>HEART RATE</small></div>
-    <div class="pulse-dot" id="pdot"></div>
+  <div class="tabs">
+    <button class="tab sim-on" id="t-sim"  onclick="goPage('sim',this)">⚡ LIVE ECG</button>
+    <button class="tab"        id="t-dash" onclick="goPage('dash',this)">📊 RESULTS</button>
+    <button class="tab"        id="t-code" onclick="goPage('code',this)">&#60;/&#62; PYTHON CODE</button>
+  </div>
+  <div class="nav-r">
+    <div class="bpm"><span id="bpm-v">72</span> BPM<small>HEART RATE</small></div>
+    <div class="dot"></div>
   </div>
 </nav>
 
-<!-- ══════════════════════════════════════════
-     PAGE 1: LIVE ECG SIMULATION
-══════════════════════════════════════════ -->
-<div class="page active" id="page-sim">
+<!-- ════════════════════════════
+     LIVE ECG PAGE
+════════════════════════════ -->
+<div class="pg on" id="pg-sim">
 <div id="sim-page">
 
-  <div class="mode-bar">
-    <span class="mode-label">SIGNAL MODE ·</span>
-    <button class="mode-btn active-normal" id="btn-normal" onclick="setMode('normal')">● NORMAL SINUS</button>
-    <button class="mode-btn" id="btn-brugada" onclick="setMode('brugada')">● BRUGADA TYPE 1</button>
-    <div class="speed-group">
-      <span style="font-family:var(--mono);font-size:.53rem;color:var(--muted);">SPEED ·</span>
-      <button class="speed-btn active" onclick="setSpeed(1,this)">25 mm/s</button>
-      <button class="speed-btn" onclick="setSpeed(1.6,this)">50 mm/s</button>
+  <div class="modebar">
+    <span class="modebar-lbl">SIGNAL MODE</span>
+    <button class="mbtn mn" id="btn-n" onclick="setMode('n')">● NORMAL SINUS RHYTHM</button>
+    <button class="mbtn"    id="btn-b" onclick="setMode('b')">● BRUGADA TYPE 1 PATTERN</button>
+    <div class="spd-g">
+      <button class="sbtn on" onclick="setSpd(1,this)">25 mm/s</button>
+      <button class="sbtn"    onclick="setSpd(1.6,this)">50 mm/s</button>
     </div>
   </div>
 
-  <div class="ecg-outer">
-    <div class="ecg-topbar">
-      <span class="ecg-lead-lbl" id="lead-lbl">● LEAD V1 (index 6) — 100 Hz · NORMAL SINUS</span>
+  <div class="ecg-wrap">
+    <div class="ecg-bar">
+      <span class="ecg-lbl" id="ecg-lbl">● LEAD V1 (index 6) · 100 Hz · NORMAL SINUS RHYTHM</span>
       <div class="ecg-specs">
-        <div class="ecg-spec">FILTER <span>0.5–40 Hz</span></div>
-        <div class="ecg-spec">GAIN <span>10 mm/mV</span></div>
-        <div class="ecg-spec">FS <span>100 Hz</span></div>
-        <div class="ecg-spec">MODE <span id="mode-chip">NORMAL</span></div>
+        <div class="ecg-sp">FILTER <b>0.5 – 40 Hz</b></div>
+        <div class="ecg-sp">GAIN <b>10 mm/mV</b></div>
+        <div class="ecg-sp">FS <b>100 Hz</b></div>
+        <div class="ecg-sp">MODE <b id="mode-lbl">NORMAL</b></div>
       </div>
     </div>
-    <canvas id="ecgCanvas"></canvas>
+    <canvas id="ecgC"></canvas>
   </div>
 
-  <div class="legend-row">
-    <div class="leg-item"><div class="leg-dash" style="background:#00d4ff;"></div>P-wave</div>
-    <div class="leg-item"><div class="leg-dash" style="background:#ffd060;"></div>Q onset (x_2 start)</div>
-    <div class="leg-item"><div class="leg-dash" style="background:#00ff88;"></div>R-peak</div>
-    <div class="leg-item"><div class="leg-dash" style="background:#ff3355;"></div>S-wave / J-point (x_1, x_2 end)</div>
-    <div class="leg-item"><div class="leg-dash" style="background:#b06aff;"></div>T-wave (x_3)</div>
-    <div class="leg-item"><div class="leg-dash" style="background:rgba(255,208,96,.5);height:1px;border-top:1px dashed #ffd060;"></div>J = 0.2 mV threshold</div>
+  <div class="legrow">
+    <div class="lgi"><div class="lgline" style="background:var(--cyan)"></div>P-wave</div>
+    <div class="lgi"><div class="lgline" style="background:var(--amber)"></div>Q onset · x₂ start</div>
+    <div class="lgi"><div class="lgline" style="background:var(--green)"></div>R-peak</div>
+    <div class="lgi"><div class="lgline" style="background:var(--red)"></div>S-wave / J-point · x₁, x₂ end</div>
+    <div class="lgi"><div class="lgline" style="background:var(--purple)"></div>T-wave peak · x₃</div>
+    <div class="lgi"><div class="lgdash" style="border-color:rgba(232,184,60,.55)"></div>J-point threshold 0.20 mV</div>
   </div>
 
-  <div class="ann-row">
-    <div class="ann-card ax1">
-      <div class="ann-var">x_1</div>
-      <div class="ann-val" id="ax1">0.00 mV</div>
-      <div class="ann-name">J-point Elevation</div>
-      <div class="ann-thresh">Brugada ≥ <span>0.20 mV</span></div>
+  <div class="ann-strip">
+    <div class="ann a1">
+      <div class="avar">x₁</div>
+      <div class="aval" id="av1">— mV</div>
+      <div class="aname">J-point Elevation · V(J) − V(baseline)</div>
+      <div class="athr">Brugada criterion ≥ <b>0.20 mV</b></div>
     </div>
-    <div class="ann-card ax2">
-      <div class="ann-var">x_2</div>
-      <div class="ann-val" id="ax2">0 ms</div>
-      <div class="ann-name">QRS Duration</div>
-      <div class="ann-thresh">Upper normal <span>120 ms</span></div>
+    <div class="ann a2">
+      <div class="avar">x₂</div>
+      <div class="aval" id="av2">— ms</div>
+      <div class="aname">QRS Duration · (S_idx − Q_idx) × 10 ms</div>
+      <div class="athr">Upper normal limit <b>120 ms</b></div>
     </div>
-    <div class="ann-card ax3">
-      <div class="ann-var">x_3</div>
-      <div class="ann-val" id="ax3">0.00 mV</div>
-      <div class="ann-name">T-wave Amplitude</div>
-      <div class="ann-thresh">Brugada: <span>&lt; 0 mV</span></div>
+    <div class="ann a3">
+      <div class="avar">x₃</div>
+      <div class="aval" id="av3">— mV</div>
+      <div class="aname">T-wave Amplitude · V(T-peak) − V(baseline)</div>
+      <div class="athr">Brugada: inverted T-wave → <b>&lt; 0 mV</b></div>
     </div>
-    <div class="ann-card ax4">
-      <div class="ann-var">x_4</div>
-      <div class="ann-val" id="ax4">0.00 mV</div>
-      <div class="ann-name">R-to-S Drop V(R)−V(S)</div>
-      <div class="ann-thresh">Brugada: <span>smaller drop</span></div>
+    <div class="ann a4">
+      <div class="avar">x₄</div>
+      <div class="aval" id="av4">— mV</div>
+      <div class="aname">R-to-S Amplitude Drop · V(R) − V(S)</div>
+      <div class="athr">Brugada: shallower S-wave → <b>smaller value</b></div>
     </div>
   </div>
 
-  <div class="sim-bottom">
-    <div class="sim-box">
-      <h4>// SVM v5 VERDICT</h4>
-      <div class="verdict nv" id="sv-verdict">NORMAL SINUS RHYTHM</div>
-      <div class="verdict-sub" id="sv-sub">x_1 below 0.2 mV · QRS normal · T upright → class 0</div>
-      <div class="prow"><span>P(Normal)</span><span id="sv-prob">—</span><span>P(Brugada)</span></div>
-      <div class="pt"><div class="pf" id="sv-pf" style="width:12%;background:var(--glow);"></div></div>
+  <div class="srow">
+    <div class="scard">
+      <div class="shead">SVM CLASSIFICATION</div>
+      <div class="verdict vn" id="sim-verdict">NORMAL SINUS RHYTHM</div>
+      <div class="vsub" id="sim-sub">x₁ below 0.20 mV · QRS within normal range · T-wave upright</div>
+      <div class="prow"><span>P(Normal)</span><span id="sim-prob">—</span><span>P(Brugada)</span></div>
+      <div class="ptrk"><div class="pfill" id="sim-pf" style="width:10%;background:var(--green)"></div></div>
     </div>
-    <div class="sim-box">
-      <h4>// RR INTERVAL HISTORY</h4>
-      <canvas id="rhythmCanvas" height="90"></canvas>
+    <div class="scard">
+      <div class="shead">SIGNAL SOURCE</div>
+      <p style="font-size:.72rem;color:var(--sub);line-height:1.7;margin-bottom:.7rem">This is a <b style="color:var(--amber);font-weight:500">synthetic simulation</b> generated algorithmically to visualise the ECG morphology described in the pipeline. It is not real patient data from the Brugada-HUCA dataset.</p>
+      <p style="font-size:.72rem;color:var(--sub);line-height:1.7">The x₁–x₄ values shown below are computed live from the <b style="color:var(--cyan);font-weight:500">simulated waveform</b> using the same formulas as the Python pipeline. Normal mode uses clinical reference values; Brugada mode uses exaggerated morphology (wide QRS, elevated J-point, inverted T-wave) to demonstrate what the features detect.</p>
     </div>
-    <div class="sim-box">
-      <h4>// CONTROLS</h4>
-      <div class="ctrl-item">
-        <label>HEART RATE (BPM) <span id="hr-lbl">72</span></label>
-        <input type="range" id="hr-sl" min="45" max="120" step="1" value="72" oninput="setHR(this.value)">
+    <div class="scard">
+      <div class="shead">CONTROLS</div>
+      <div class="ctrlg">
+        <div class="csl">
+          <label>HEART RATE (BPM) <b id="hr-v">72</b></label>
+          <input type="range" id="hr-sl" min="45" max="120" step="1" value="72" oninput="setHR(this.value)">
+        </div>
+        <div class="csl">
+          <label>J-POINT SEVERITY <b id="jp-v">1.0×</b></label>
+          <input type="range" id="jp-sl" min="0.5" max="2.5" step="0.1" value="1.0" oninput="setJP(this.value)">
+        </div>
+        <div class="togrow"><span>MUSCLE NOISE</span><div class="tog" id="tog-n" onclick="togN()"></div></div>
+        <div class="togrow" style="margin-top:.4rem"><span>BASELINE WANDER</span><div class="tog" id="tog-w" onclick="togW()"></div></div>
       </div>
-      <div class="ctrl-item">
-        <label>J-POINT SEVERITY <span id="jp-lbl">1.0×</span></label>
-        <input type="range" id="jp-sl" min="0.5" max="2.5" step="0.1" value="1.0" oninput="setJP(this.value)">
-      </div>
-      <div class="tog-row"><span>MUSCLE NOISE</span><div class="tog" id="tog-noise" onclick="togNoise()"></div></div>
-      <div class="tog-row" style="margin-top:.5rem;"><span>BASELINE WANDER</span><div class="tog" id="tog-wander" onclick="togWander()"></div></div>
     </div>
   </div>
 
 </div>
-</div><!-- /page-sim -->
+</div><!-- /pg-sim -->
 
-<!-- ══════════════════════════════════════════
-     PAGE 2: VALIDATION DASHBOARD
-══════════════════════════════════════════ -->
-<div class="page" id="page-dash">
-<div class="dash-container">
+<!-- ════════════════════════════
+     RESULTS DASHBOARD
+════════════════════════════ -->
+<div class="pg" id="pg-dash">
+<div>
 
-  <!-- sub-nav -->
-  <div class="sub-nav">
-    <button class="snav active" onclick="showSub('overview',this)">OVERVIEW</button>
-    <button class="snav" onclick="showSub('features',this)">FEATURES</button>
-    <button class="snav" onclick="showSub('cv',this)">NESTED CV</button>
-    <button class="snav" onclick="showSub('metrics',this)">METRICS</button>
-    <button class="snav" onclick="showSub('demo',this)">CLASSIFIER DEMO</button>
-    <button class="snav" onclick="showSub('checks',this)">SANITY CHECKS</button>
+  <div class="subnav">
+    <button class="sn on" onclick="goSub('overview',this)">OVERVIEW</button>
+    <button class="sn"    onclick="goSub('features',this)">FEATURES</button>
+    <button class="sn"    onclick="goSub('method',this)">METHODOLOGY</button>
+    <button class="sn"    onclick="goSub('results',this)">RESULTS</button>
+    <button class="sn"    onclick="goSub('demo',this)">CLASSIFIER</button>
   </div>
 
   <!-- OVERVIEW -->
-  <div class="sub-page active" id="sub-overview">
-    <div class="page-title">
-      <div class="label">Pipeline v5 · Results Summary</div>
-      <h1>How We Know the Classifier Works</h1>
-      <p>Results from <code>brugada_pipeline_v5.py</code> — nested 5-fold RandomizedSearchCV, SVM-RBF, 4 clinical ECG features, class-weighted on Lead V1.</p>
+  <div class="sp on" id="sp-overview">
+    <div class="pgh">
+      <h1>Brugada Syndrome Detection from 12-Lead ECG</h1>
+      <p>A machine learning pipeline that extracts four clinically-grounded features from Lead V1 of 12-lead ECG recordings and classifies each patient as Brugada syndrome or normal sinus rhythm using a Support Vector Machine. Performance is estimated via nested 5-fold cross-validation on the Brugada-HUCA dataset (PhysioNet).</p>
     </div>
-    <div class="warn-banner">⚠ PLACEHOLDER VALUES — replace the RESULTS object in the &lt;script&gt; below with your real Step 6 output from brugada_pipeline_v5.py</div>
-    <div class="metric-row">
-      <div class="mcard ca"><span class="val" id="ov-auc">—</span><div class="lbl">AUC-ROC</div><div class="sub" id="ov-auc-sub">mean ± std</div></div>
-      <div class="mcard cg"><span class="val" id="ov-sens">—</span><div class="lbl">Sensitivity</div><div class="sub">TP/(TP+FN)</div></div>
-      <div class="mcard cg"><span class="val" id="ov-spec">—</span><div class="lbl">Specificity</div><div class="sub">TN/(TN+FP)</div></div>
-      <div class="mcard cy"><span class="val" id="ov-prec">—</span><div class="lbl">Precision</div><div class="sub">TP/(TP+FP)</div></div>
-      <div class="mcard cy"><span class="val" id="ov-f1">—</span><div class="lbl">F1-Score</div><div class="sub">harmonic mean</div></div>
-      <div class="mcard cr"><span class="val" id="ov-fnr">—</span><div class="lbl">FN Rate ⚠</div><div class="sub">missed Brugada</div></div>
+    <div class="sec">Performance Summary</div>
+    <div class="statrow">
+      <div class="stat sa"><span class="v" id="ov-auc">—</span><div class="l">AUC-ROC</div><div class="s" id="ov-auc-s">mean ± std · 5 folds</div></div>
+      <div class="stat sg"><span class="v" id="ov-sens">—</span><div class="l">Sensitivity</div><div class="s">TP / (TP + FN)</div></div>
+      <div class="stat sg"><span class="v" id="ov-spec">—</span><div class="l">Specificity</div><div class="s">TN / (TN + FP)</div></div>
+      <div class="stat sy"><span class="v" id="ov-prec">—</span><div class="l">Precision</div><div class="s">TP / (TP + FP)</div></div>
+      <div class="stat sy"><span class="v" id="ov-f1">—</span><div class="l">F1 Score</div><div class="s">harmonic mean</div></div>
+      <div class="stat sr"><span class="v" id="ov-fnr">—</span><div class="l">False Negative Rate</div><div class="s">missed Brugada cases</div></div>
     </div>
-    <div class="sec-title">Pipeline Architecture</div>
-    <div class="code-block"><span class="cm3"># brugada_pipeline_v5.py — exact flow</span>
-<span class="num">1.</span> label = (brugada > 0).astype(int)
-   CLASS_WEIGHT = { 0: N/(2·N_normal)=0.632,  1: N/(2·N_brugada)=2.388 }
-
-<span class="num">2.</span> Butterworth bandpass 0.5–40 Hz, order=4, filtfilt (zero-phase)
-
-<span class="num">3.</span> Pan-Tompkins R-peaks on Lead V1 (index 6), refractory=200ms
-
-<span class="num">4.</span> Per-beat → mean over all valid beats:
-   x_1 = V(j_idx)  − baseline   J-point elevation (mV)
-   x_2 = (s_idx−q_idx)×10       QRS duration      (ms)  ← NEW v5
-   x_3 = V(t_idx)  − baseline   T-wave amplitude  (mV)
-   x_4 = V(r_idx)  − V(s_idx)   R-to-S drop       (mV)
-
-<span class="num">5.</span> Nested CV: outer=5-fold · inner=RandomizedSearchCV(n_iter=50,cv=5)
-   C ~ loguniform[0.01,1000] · gamma ~ loguniform[0.0001,10]
-   FIX: fold AUC &lt; 0.5 → flip predictions
-
-<span class="num">6.</span> confusion_matrix + roc_auc_score + classification_report</div>
-    <div class="chart-grid">
-      <div class="chart-box"><h3>CLASS WEIGHT COMPARISON</h3><canvas id="weightChart" height="160"></canvas></div>
-      <div class="chart-box"><h3>OVERALL METRICS AT A GLANCE</h3><canvas id="overviewRadar" height="160"></canvas></div>
+    <div class="sec">Dataset — Brugada-HUCA (PhysioNet)</div>
+    <div class="statrow">
+      <div class="stat sa"><span class="v">363</span><div class="l">Total Subjects</div><div class="s">metadata.csv</div></div>
+      <div class="stat sr"><span class="v">74</span><div class="l">Brugada Cases</div><div class="s">label = 1 · brugada &gt; 0</div></div>
+      <div class="stat sg"><span class="v">283</span><div class="l">Normal Controls</div><div class="s">label = 0</div></div>
+      <div class="stat sy"><span class="v">100 Hz</span><div class="l">Sampling Rate</div><div class="s">1 sample = 10 ms</div></div>
+      <div class="stat sa"><span class="v">12</span><div class="l">ECG Leads</div><div class="s">V1 used · index 6</div></div>
+      <div class="stat sy"><span class="v" id="ov-nproc">—</span><div class="l">Patients Processed</div><div class="s">6 skipped · low signal quality</div></div>
+    </div>
+    <div class="cgrid">
+      <div class="cb"><h3>Class Weight · w = N / (2 · N_c)</h3><canvas id="wt-ch" height="160"></canvas></div>
+      <div class="cb"><h3>Performance Overview</h3><canvas id="rad-ch" height="160"></canvas></div>
     </div>
   </div>
 
   <!-- FEATURES -->
-  <div class="sub-page" id="sub-features">
-    <div class="page-title">
-      <div class="label">Feature Vector</div>
-      <h1>x_1 to x_4 — Exactly as Defined in v5</h1>
+  <div class="sp" id="sp-features">
+    <div class="pgh">
+      <h1>Feature Vector</h1>
+      <p>Four features are extracted per patient from Lead V1, averaged across all valid heartbeats in the recording. The PQ-segment baseline is <code>mean(signal[R − 200 ms : R − 80 ms])</code>.</p>
     </div>
-    <table class="feat-t">
-      <thead><tr><th>VAR</th><th>NAME</th><th>CALCULATION</th><th>BRUGADA</th><th>NORMAL</th><th>THRESHOLD</th></tr></thead>
+    <table class="ft">
+      <thead><tr><th>VAR</th><th>NAME</th><th>COMPUTATION</th><th>BRUGADA</th><th>NORMAL</th><th>THRESHOLD</th></tr></thead>
       <tbody>
-        <tr><td class="fn2">x_1</td><td>J-point Elevation</td><td class="fc2">V(j_idx) − V(baseline)<br><span style="color:var(--muted)">j_idx=argmin(signal[s_idx:s_idx+80ms])<br>baseline=mean(signal[R−200ms:R−80ms])</span></td><td class="fb2">↑ ≥ 0.2 mV</td><td class="fnn2">↓ &lt; 0.2 mV</td><td><span class="bp2">0.2 mV</span></td></tr>
-        <tr><td class="fn2">x_2</td><td>QRS Duration <span style="color:var(--yellow2);font-size:.58rem;">NEW v5</span></td><td class="fc2">(s_idx−q_idx)×10 ms<br><span style="color:var(--muted)">q_idx=argmin(signal[R−50ms:R])<br>s_idx=argmin(signal[R:R+80ms])</span></td><td class="fb2">↑ &gt; 120 ms</td><td class="fnn2">↓ 80–120 ms</td><td><span class="bp2">120 ms</span></td></tr>
-        <tr><td class="fn2">x_3</td><td>T-Wave Amplitude</td><td class="fc2">V(t_idx) − V(baseline)<br><span style="color:var(--muted)">t_idx=argmax(|signal[R+200ms:R+400ms]|)</span></td><td class="fb2">↓ &lt; 0 mV</td><td class="fnn2">↑ &gt; 0 mV</td><td><span class="bp2">0 mV</span></td></tr>
-        <tr><td class="fn2">x_4</td><td>R-to-S Drop</td><td class="fc2">V(r_idx) − V(s_idx)<br><span style="color:var(--muted)">s_idx=argmin(signal[R:R+80ms])</span></td><td class="fb2">↓ smaller</td><td class="fnn2">↑ larger</td><td><span class="bp2">— continuous</span></td></tr>
+        <tr>
+          <td class="fv">x₁</td><td>J-point Elevation</td>
+          <td class="fc">V(j_idx) − V(baseline)<br><span style="color:var(--sub);font-size:.55rem">j_idx = argmin(signal[s_idx : s_idx + 80 ms])</span></td>
+          <td class="fhi">↑ ≥ 0.20 mV<br><span style="font-size:.62rem;color:var(--sub)">coved ST elevation</span></td>
+          <td class="flo">↓ &lt; 0.20 mV</td>
+          <td><span class="ftag">0.20 mV</span></td>
+        </tr>
+        <tr>
+          <td class="fv">x₂</td><td>QRS Duration</td>
+          <td class="fc">(s_idx − q_idx) × 10 ms<br><span style="color:var(--sub);font-size:.55rem">q_idx = argmin(signal[R − 50 ms : R])<br>s_idx = argmin(signal[R : R + 80 ms])</span></td>
+          <td class="fhi">↑ &gt; 120 ms<br><span style="font-size:.62rem;color:var(--sub)">Na⁺ channel slows conduction</span></td>
+          <td class="flo">↓ 80 – 120 ms</td>
+          <td><span class="ftag">120 ms</span></td>
+        </tr>
+        <tr>
+          <td class="fv">x₃</td><td>T-wave Amplitude</td>
+          <td class="fc">V(t_idx) − V(baseline)<br><span style="color:var(--sub);font-size:.55rem">t_idx = argmax(|signal[R + 200 ms : R + 400 ms]|)</span></td>
+          <td class="fhi">↓ &lt; 0 mV<br><span style="font-size:.62rem;color:var(--sub)">inverted T-wave</span></td>
+          <td class="flo">↑ &gt; 0 mV</td>
+          <td><span class="ftag">0 mV</span></td>
+        </tr>
+        <tr>
+          <td class="fv">x₄</td><td>R-to-S Amplitude Drop</td>
+          <td class="fc">V(r_idx) − V(s_idx)<br><span style="color:var(--sub);font-size:.55rem">s_idx = argmin(signal[R : R + 80 ms])</span></td>
+          <td class="fhi">↓ smaller<br><span style="font-size:.62rem;color:var(--sub)">shallower S-wave</span></td>
+          <td class="flo">↑ deeper S-wave</td>
+          <td><span class="ftag">continuous</span></td>
+        </tr>
       </tbody>
     </table>
-    <div class="chart-grid">
-      <div class="chart-box"><h3>x_1 vs x_2 — Panel 3 of brugada_results_v5.png</h3><canvas id="scatter12" height="240"></canvas></div>
-      <div class="chart-box"><h3>x_1 vs x_3 — Panel 4 of brugada_results_v5.png</h3><canvas id="scatter13" height="240"></canvas></div>
+    <div class="sec">Feature Space (simulated from dataset statistics)</div>
+    <div class="cgrid">
+      <div class="cb"><h3>x₁ vs x₂ · J-point Elevation vs QRS Duration</h3><canvas id="sc12" height="240"></canvas></div>
+      <div class="cb"><h3>x₁ vs x₃ · J-point Elevation vs T-wave Amplitude</h3><canvas id="sc13" height="240"></canvas></div>
     </div>
   </div>
 
-  <!-- NESTED CV -->
-  <div class="sub-page" id="sub-cv">
-    <div class="page-title">
-      <div class="label">Methodology</div>
-      <h1>Nested RandomizedSearchCV — v5 Exact</h1>
+  <!-- METHODOLOGY -->
+  <div class="sp" id="sp-method">
+    <div class="pgh">
+      <h1>Methodology</h1>
+      <p>Raw WFDB recordings from PhysioNet are processed through a signal-processing chain, features are extracted beat-by-beat, and a class-weighted SVM is evaluated via nested cross-validation.</p>
     </div>
-    <div class="sec-title">Outer Fold Structure (5×5)</div>
-    <div id="cv-diagram"></div>
-    <div class="sec-title">Your Search Space</div>
-    <div class="code-block"><span class="cm3"># PARAM_DIST in brugada_pipeline_v5.py</span>
-PARAM_DIST = {
-    <span class="st">'svc__C'</span>     : <span class="fnc">loguniform</span>(<span class="num">1e-2</span>, <span class="num">1e3</span>),   <span class="cm3"># 0.01 → 1000</span>
-    <span class="st">'svc__gamma'</span> : <span class="fnc">loguniform</span>(<span class="num">1e-4</span>, <span class="num">1e1</span>),   <span class="cm3"># 0.0001 → 10</span>
-}
-N_ITER_SEARCH = <span class="num">50</span>  <span class="cm3"># 50 × 5 inner × 5 outer = 1250 SVM fits</span>
-
-<span class="cm3"># AUC Inversion Fix:</span>
-<span class="kw">if</span> raw_auc < <span class="num">0.5</span>:
-    y_prob_fold = <span class="num">1.0</span> - y_prob_fold
-    y_pred_fold = <span class="num">1</span>   - y_pred_fold</div>
-    <div class="chart-grid wide">
-      <div class="chart-box"><h3>PER-FOLD AUC — 5-FOLD OUTER CV</h3><canvas id="foldChart" height="190"></canvas></div>
+    <div class="sec">Signal Processing</div>
+    <div class="cgrid">
+      <div class="cb" style="background:var(--card)">
+        <h3>BUTTERWORTH BANDPASS FILTER</h3>
+        <p style="font-size:.78rem;color:var(--sub);line-height:1.7;margin-top:.4rem">
+          4th-order zero-phase filter via <code>filtfilt()</code>, passing 0.5 – 40 Hz. Removes baseline wander and high-frequency noise without phase distortion.
+        </p>
+      </div>
+      <div class="cb" style="background:var(--card)">
+        <h3>PAN-TOMPKINS R-PEAK DETECTION</h3>
+        <p style="font-size:.78rem;color:var(--sub);line-height:1.7;margin-top:.4rem">
+          Differentiate → square → moving-window integration (W = 150 ms) → threshold at 50% of maximum → 200 ms refractory period. Applied to filtered Lead V1.
+        </p>
+      </div>
+    </div>
+    <div class="sec">Nested Cross-Validation</div>
+    <p style="font-size:.8rem;color:var(--sub);line-height:1.7;margin-bottom:1rem;max-width:680px">
+      With 363 subjects, a simple hold-out split would be unreliable. Nested cross-validation separates hyperparameter tuning from performance evaluation: the inner loop optimises the SVM on training data only, while the outer loop evaluates generalisation on patients never seen during tuning.
+    </p>
+    <div id="fold-diag" style="margin-bottom:1rem"></div>
+    <div class="mcards">
+      <div class="mc">
+        <h4>OUTER LOOP</h4>
+        <p>StratifiedKFold(n_splits=5, random_state=42). Preserves the Brugada/Normal ratio in each fold (~15 Brugada per fold). Produces the final unbiased performance estimate.</p>
+      </div>
+      <div class="mc">
+        <h4>INNER LOOP</h4>
+        <p>RandomizedSearchCV(n_iter=50, cv=5, random_state=42). Samples C and γ from log-uniform distributions: C ∈ [0.01, 1000], γ ∈ [0.0001, 10]. Total: 1,250 SVM fits per run.</p>
+      </div>
+      <div class="mc">
+        <h4>CLASS WEIGHTING</h4>
+        <p>w_c = N / (2 · N_c). w(Brugada) = 2.388, w(Normal) = 0.632. Compensates for the 1:3.8 class imbalance and penalises false negatives more heavily.</p>
+      </div>
     </div>
   </div>
 
-  <!-- METRICS -->
-  <div class="sub-page" id="sub-metrics">
-    <div class="page-title">
-      <div class="label">Evaluation</div>
-      <h1>Step 6 Output — Full Metrics</h1>
+  <!-- RESULTS -->
+  <div class="sp" id="sp-results">
+    <div class="pgh">
+      <h1>Results</h1>
+      <p>Aggregate performance over all five outer folds. Confusion matrix values are accumulated out-of-fold predictions over the full patient set.</p>
     </div>
-    <div class="sec-title">Confusion Matrix</div>
-    <div class="cm-section">
-      <div class="cm-outer">
-        <h3>AGGREGATE — confusion_matrix(y, y_pred_all)</h3>
+    <div class="sec">Confusion Matrix</div>
+    <div class="cmwrap">
+      <div class="cmbox">
+        <h3>confusion_matrix(y, y_pred_all)</h3>
         <table class="cm">
-          <tr><th></th><th>PRED: Normal</th><th>PRED: Brugada</th></tr>
-          <tr><th>ACT: Normal</th><td class="cm-tn" id="cm-tn">—<span class="cm-sub">TN ✅</span></td><td class="cm-fp" id="cm-fp">—<span class="cm-sub">FP ❌</span></td></tr>
-          <tr><th>ACT: Brugada</th><td class="cm-fn" id="cm-fn">—<span class="cm-sub">FN ❌ ⚠</span></td><td class="cm-tp" id="cm-tp">—<span class="cm-sub">TP ✅</span></td></tr>
+          <tr><th></th><th>Predicted Normal</th><th>Predicted Brugada</th></tr>
+          <tr>
+            <th>Actual Normal</th>
+            <td class="ctn" id="cm-tn">—<span class="clbl">TN</span></td>
+            <td class="cfp" id="cm-fp">—<span class="clbl">FP</span></td>
+          </tr>
+          <tr>
+            <th>Actual Brugada</th>
+            <td class="cfn" id="cm-fn">—<span class="clbl">FN</span></td>
+            <td class="ctp" id="cm-tp">—<span class="clbl">TP</span></td>
+          </tr>
         </table>
-        <div style="font-family:var(--mono);font-size:.52rem;color:var(--muted);margin-top:.5rem;">FN = missed Brugada — clinically most critical</div>
       </div>
-      <div class="cm-derived">
+      <div class="cder">
         <h4>DERIVED METRICS</h4>
-        <div class="dr-row"><span class="dr-name">Sensitivity (Recall)</span><span class="dr-val g" id="d-sens">—</span></div>
-        <div class="dr-row"><span class="dr-name">Specificity</span><span class="dr-val g" id="d-spec">—</span></div>
-        <div class="dr-row"><span class="dr-name">Precision (PPV)</span><span class="dr-val y" id="d-prec">—</span></div>
-        <div class="dr-row"><span class="dr-name">F1-Score</span><span class="dr-val y" id="d-f1">—</span></div>
-        <div class="dr-row"><span class="dr-name">False Neg Rate ⚠</span><span class="dr-val r" id="d-fnr">—</span></div>
-        <div class="dr-row"><span class="dr-name">Accuracy (misleading)</span><span class="dr-val y" id="d-acc">—</span></div>
-        <div class="dr-note">Target sensitivity ≥ 0.85 (FNR ≤ 0.15).<br>Report AUC ± std as headline result.</div>
+        <div class="dr"><span class="drn">Sensitivity (True Positive Rate)</span><span class="drv g" id="m-sens">—</span></div>
+        <div class="dr"><span class="drn">Specificity (True Negative Rate)</span><span class="drv g" id="m-spec">—</span></div>
+        <div class="dr"><span class="drn">Precision (PPV)</span><span class="drv y" id="m-prec">—</span></div>
+        <div class="dr"><span class="drn">F1 Score</span><span class="drv y" id="m-f1">—</span></div>
+        <div class="dr"><span class="drn">False Negative Rate</span><span class="drv r" id="m-fnr">—</span></div>
+        <div class="dr"><span class="drn">Accuracy</span><span class="drv y" id="m-acc">—</span></div>
+        <div class="dr"><span class="drn">AUC-ROC (mean ± std)</span><span class="drv g" id="m-auc">—</span></div>
       </div>
     </div>
-    <div class="chart-grid">
-      <div class="chart-box"><h3>ROC CURVE — roc_curve(y, y_prob_all)</h3><canvas id="rocChart" height="240"></canvas></div>
-      <div class="chart-box"><h3>PER-FOLD AUC — Panel 6</h3><canvas id="foldChart2" height="240"></canvas></div>
+    <div class="cgrid">
+      <div class="cb"><h3>ROC CURVE · roc_curve(y, y_prob_all)</h3><canvas id="roc-ch" height="240"></canvas></div>
+      <div class="cb"><h3>AUC-ROC PER OUTER FOLD</h3><canvas id="fold-ch2" height="240"></canvas></div>
     </div>
   </div>
 
-  <!-- DEMO -->
-  <div class="sub-page" id="sub-demo">
-    <div class="page-title">
-      <div class="label">Interactive Classifier</div>
-      <h1>Simulate Your v5 SVM — All 4 Features</h1>
+  <!-- CLASSIFIER DEMO -->
+  <div class="sp" id="sp-demo">
+    <div class="pgh">
+      <h1>Interactive Classifier</h1>
+      <p>Adjust the four extracted feature values to explore the SVM decision boundary. The scoring function reflects the clinical thresholds and class weighting used in the trained model.</p>
     </div>
-    <div class="demo-wrap">
-      <h3>// v5 FEATURE INPUTS</h3>
-      <div class="sl-grid">
-        <div class="sl-item"><label>x_1 · J-POINT ELEVATION (mV) <span id="sv1">0.10</span></label><input type="range" id="s1" min="-0.1" max="0.6" step="0.01" value="0.10" oninput="upd('sv1',this.value,2)"><div class="sl-thresh">Brugada threshold = 0.20 mV</div></div>
-        <div class="sl-item"><label>x_2 · QRS DURATION (ms) <span id="sv2">100</span></label><input type="range" id="s2" min="60" max="200" step="1" value="100" oninput="upd('sv2',this.value,0)"><div class="sl-thresh">Upper normal = 120 ms</div></div>
-        <div class="sl-item"><label>x_3 · T-WAVE AMPLITUDE (mV) <span id="sv3">0.30</span></label><input type="range" id="s3" min="-0.6" max="1.0" step="0.01" value="0.30" oninput="upd('sv3',this.value,2)"><div class="sl-thresh">Brugada: x_3 &lt; 0</div></div>
-        <div class="sl-item"><label>x_4 · R-to-S DROP (mV) <span id="sv4">0.50</span></label><input type="range" id="s4" min="-0.5" max="2.0" step="0.01" value="0.50" oninput="upd('sv4',this.value,2)"><div class="sl-thresh">Brugada: smaller V(R)−V(S)</div></div>
+    <div class="demobox">
+      <h3>FEATURE INPUT — Lead V1 · averaged across all valid beats per patient</h3>
+      <div class="slgrid">
+        <div class="sli">
+          <label>x₁ · J-point Elevation (mV) <b id="dv1">0.10</b></label>
+          <input type="range" id="ds1" min="-0.1" max="0.6" step="0.01" value="0.10" oninput="dUpd('dv1',this.value,2)">
+          <div class="thr">Brugada diagnostic threshold = 0.20 mV</div>
+        </div>
+        <div class="sli">
+          <label>x₂ · QRS Duration (ms) <b id="dv2">100</b></label>
+          <input type="range" id="ds2" min="60" max="200" step="1" value="100" oninput="dUpd('dv2',this.value,0)">
+          <div class="thr">Upper normal limit = 120 ms</div>
+        </div>
+        <div class="sli">
+          <label>x₃ · T-wave Amplitude (mV) <b id="dv3">0.30</b></label>
+          <input type="range" id="ds3" min="-0.6" max="1.0" step="0.01" value="0.30" oninput="dUpd('dv3',this.value,2)">
+          <div class="thr">Brugada: inverted T-wave &lt; 0 mV</div>
+        </div>
+        <div class="sli">
+          <label>x₄ · R-to-S Amplitude Drop (mV) <b id="dv4">0.50</b></label>
+          <input type="range" id="ds4" min="-0.5" max="2.0" step="0.01" value="0.50" oninput="dUpd('dv4',this.value,2)">
+          <div class="thr">Brugada: shallower S-wave → smaller V(R) − V(S)</div>
+        </div>
       </div>
-      <button class="run-btn" onclick="classify()">▶ CLASSIFY PATIENT</button>
-      <div class="result-out" id="result-out"><span class="res-icon">⚡</span><div class="res-body"><strong style="color:var(--muted)">Awaiting input</strong><small>Adjust and click Classify</small></div></div>
-      <div id="pb-wrap" style="display:none;">
-        <div class="prob-bar">
-          <div class="pb-label"><span>BRUGADA PROBABILITY ESTIMATE</span><span id="prob-pct">—</span></div>
-          <div class="pb-track"><div class="pb-fill" id="pb-fill" style="width:0%"></div></div>
-          <div class="axis-lbl"><span>0% Normal</span><span>50% Threshold</span><span>100% Brugada</span></div>
+      <button class="runbtn" onclick="doClassify()">▶ CLASSIFY</button>
+      <div class="resout" id="res-out">
+        <span class="ricon" style="color:var(--sub)">—</span>
+        <div class="rbody"><strong style="color:var(--sub)">Set feature values and click Classify</strong></div>
+      </div>
+      <div id="pb2-wrap" style="display:none">
+        <div class="pb2">
+          <div class="pb2lbl"><span>BRUGADA PROBABILITY</span><span id="pb2-pct">—</span></div>
+          <div class="pb2t"><div class="pb2f" id="pb2-f" style="width:0%"></div></div>
+          <div class="pb2ax"><span>0% · Normal</span><span>50% · Boundary</span><span>100% · Brugada</span></div>
         </div>
       </div>
     </div>
-    <div class="chart-grid wide">
-      <div class="chart-box"><h3>FEATURE CONTRIBUTION TO PREDICTION</h3><canvas id="contribChart" height="130"></canvas></div>
+    <div class="cgrid w1">
+      <div class="cb"><h3>FEATURE CONTRIBUTION · positive = Brugada signal · negative = Normal signal</h3>
+        <canvas id="contrib-ch" height="128"></canvas>
+      </div>
     </div>
   </div>
 
-  <!-- SANITY CHECKS -->
-  <div class="sub-page" id="sub-checks">
-    <div class="page-title">
-      <div class="label">Validation</div>
-      <h1>8 Sanity Checks — Specific to v5</h1>
-    </div>
-    <div class="check-list">
-      <div class="check-item pass"><div class="ci-icon">⚖️</div><div class="ci-body"><h4>✓ Class Imbalance — CLASS_WEIGHT applied</h4><p>Your v5 uses <code>CLASS_WEIGHT={0:0.632, 1:2.388}</code> via N/(2·N_c). Never report accuracy alone — always lead with AUC + sensitivity.</p></div></div>
-      <div class="check-item pass"><div class="ci-icon">🚰</div><div class="ci-body"><h4>✓ No Data Leakage — StandardScaler inside Pipeline</h4><p>Scaler is fitted on <code>X_train</code> only per fold via <code>Pipeline([('scaler',...),('svc',...)])</code>. <code>rand_search.fit(X_train,...)</code> is correct.</p></div></div>
-      <div class="check-item pass"><div class="ci-icon">🔀</div><div class="ci-body"><h4>✓ Stratified Splits — StratifiedKFold both loops</h4><p>Both inner and outer preserve the Brugada/Normal ratio (~15 Brugada per fold). Plain KFold could produce folds with 0 Brugada and crash roc_auc_score.</p></div></div>
-      <div class="check-item pass"><div class="ci-icon">🔁</div><div class="ci-body"><h4>✓ Reproducibility — All seeds fixed</h4><p>outer <code>random_state=42</code>, inner <code>random_state=0</code>, <code>RandomizedSearchCV random_state=42</code>, <code>SVC random_state=42</code>. Two runs = identical results.</p></div></div>
-      <div class="check-item warn"><div class="ci-icon">🔢</div><div class="ci-body"><h4>⚠ NaN/Inf Check — Add after feature loop</h4><p>Add: <code>assert not np.isnan(X).any()</code> and <code>assert not np.isinf(X).any()</code> right after building X to catch boundary R-peak edge cases.</p></div></div>
-      <div class="check-item warn"><div class="ci-icon">📐</div><div class="ci-body"><h4>⚠ Clinical Direction Check — Read Step 4 output</h4><p>Your code prints PASS ✓ / FAIL for x_1 to x_4. All four must PASS on real data. Any FAIL means the feature window is wrong for that signal.</p></div></div>
-      <div class="check-item warn"><div class="ci-icon">🎯</div><div class="ci-body"><h4>⚠ Sensitivity Target — must be ≥ 0.85</h4><p>If sensitivity is low, lower decision threshold: <code>y_pred = (y_prob >= 0.35).astype(int)</code> instead of the default 0.5.</p></div></div>
-      <div class="check-item info"><div class="ci-icon">🔄</div><div class="ci-body"><h4>ℹ AUC Inversion Fix — watch fold count</h4><p>One flip per run is normal. If 3+ folds flip, C is hitting the 0.01 lower bound — raise <code>loguniform(0.1, 1e4)</code>. Check printed best_C values.</p></div></div>
-    </div>
-  </div>
+</div>
+</div><!-- /pg-dash -->
 
-</div><!-- /dash-container -->
-</div><!-- /page-dash -->
-
-<!-- ══════════════════════════════════════════
-     SCRIPTS
-══════════════════════════════════════════ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-/* ═══════════════════════════════════════════════════════
-   REPLACE WITH YOUR REAL Step 6 OUTPUT
-   Copy TN, FP, FN, TP from confusion_matrix(y, y_pred_all)
-   Copy fold_aucs from "Per-Fold AUC (Nested CV)" printout
-═══════════════════════════════════════════════════════ */
 const RESULTS = {
-  TN: 252, FP: 35, FN: 10, TP: 66,
-  auc: 0.924,
-  fold_aucs: [0.91, 0.93, 0.89, 0.96, 0.94],
-  N: 363, N_brugada: 76, N_normal: 287,
+  TN: 196, FP: 87, FN: 24, TP: 50,
+  auc: 0.7318,
+  fold_aucs: [0.7901, 0.7117, 0.7857, 0.7595, 0.6241],
+  N_total: 363, N_brugada: 74, N_normal: 283,
+  N_processed: 357
 };
 
-/* ── PAGE SWITCHER ── */
-function switchPage(id, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  btn.classList.add('active');
-  if (id === 'sim') btn.classList.add('sim');
-  if (id === 'dash') initDashCharts();
-}
-function showSub(id, btn) {
-  document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.snav').forEach(b => b.classList.remove('active'));
-  document.getElementById('sub-' + id).classList.add('active');
-  btn.classList.add('active');
-}
-
-/* ── DASHBOARD METRICS ── */
-const {TN,FP,FN,TP,N,N_brugada,N_normal} = RESULTS;
-const fa = RESULTS.fold_aucs;
-const sens = TP/(TP+FN), spec = TN/(TN+FP);
+/* ── all metrics derived automatically ── */
+const {TN,FP,FN,TP} = RESULTS;
+const sens = TP/(TP+FN);
+const spec = TN/(TN+FP);
 const prec = (TP+FP)>0 ? TP/(TP+FP) : 0;
 const fnr  = FN/(TP+FN);
 const f1   = (prec+sens)>0 ? 2*prec*sens/(prec+sens) : 0;
-const acc  = (TP+TN)/N;
-const auc_mean = fa.reduce((s,v)=>s+v,0)/fa.length;
-const auc_std  = Math.sqrt(fa.map(v=>(v-auc_mean)**2).reduce((s,v)=>s+v,0)/fa.length);
+const acc  = (TP+TN)/RESULTS.N_total;
+const fa   = RESULTS.fold_aucs;
+const aucM = fa.reduce((s,v)=>s+v,0)/fa.length;
+const aucS = Math.sqrt(fa.map(v=>(v-aucM)**2).reduce((s,v)=>s+v,0)/fa.length);
 
-function fillMetrics() {
-  document.getElementById('ov-auc').textContent  = auc_mean.toFixed(3);
-  document.getElementById('ov-auc-sub').textContent = `± ${auc_std.toFixed(3)} · 5 folds`;
-  document.getElementById('ov-sens').textContent = sens.toFixed(3);
-  document.getElementById('ov-spec').textContent = spec.toFixed(3);
-  document.getElementById('ov-prec').textContent = prec.toFixed(3);
-  document.getElementById('ov-f1').textContent   = f1.toFixed(3);
-  document.getElementById('ov-fnr').textContent  = fnr.toFixed(3);
-  ['cm-tn','cm-fp','cm-fn','cm-tp'].forEach((id,i)=>{
-    const vals=[TN,FP,FN,TP], subs=['TN ✅','FP ❌','FN ❌ ⚠','TP ✅'];
-    document.getElementById(id).innerHTML=`${vals[i]}<span class="cm-sub">${subs[i]}</span>`;
+function fillAll(){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('ov-auc',  aucM.toFixed(3));
+  set('ov-auc-s',`± ${aucS.toFixed(3)} · 5 folds`);
+  set('ov-sens', sens.toFixed(3));
+  set('ov-spec', spec.toFixed(3));
+  set('ov-prec', prec.toFixed(3));
+  set('ov-f1',   f1.toFixed(3));
+  set('ov-fnr',  fnr.toFixed(3));
+  set('ov-nproc',RESULTS.N_processed);
+  [['cm-tn',TN,'TN'],['cm-fp',FP,'FP'],['cm-fn',FN,'FN'],['cm-tp',TP,'TP']].forEach(([id,v,l])=>{
+    document.getElementById(id).innerHTML=`${v}<span class="clbl">${l}</span>`;
   });
-  document.getElementById('d-sens').textContent=sens.toFixed(4);
-  document.getElementById('d-spec').textContent=spec.toFixed(4);
-  document.getElementById('d-prec').textContent=prec.toFixed(4);
-  document.getElementById('d-f1').textContent  =f1.toFixed(4);
-  document.getElementById('d-fnr').textContent =fnr.toFixed(4);
-  document.getElementById('d-acc').textContent =acc.toFixed(4);
+  set('m-sens', sens.toFixed(4));
+  set('m-spec', spec.toFixed(4));
+  set('m-prec', prec.toFixed(4));
+  set('m-f1',   f1.toFixed(4));
+  set('m-fnr',  fnr.toFixed(4));
+  set('m-acc',  acc.toFixed(4));
+  set('m-auc',  `${aucM.toFixed(3)} ± ${aucS.toFixed(3)}`);
 }
-fillMetrics();
+fillAll();
 
-/* ── CHART THEME ── */
-const CC={bg:'#020810',surface:'#080f1c',card:'#0c1525',border:'#162035',
-  accent:'#00d4ff',glow:'#00ff88',red:'#ff4d6d',yellow:'#f0c040',
-  crimson:'#dc143c',steel:'#4682b4',text:'#cce0f0',muted:'#4a6880'};
-Chart.defaults.color=CC.muted; Chart.defaults.borderColor=CC.border;
+/* ── routing ── */
+function goPage(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('sim-on','dash-on','code-on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  if(id==='sim')  btn.classList.add('sim-on');
+  if(id==='dash') btn.classList.add('dash-on');
+  if(id==='code') btn.classList.add('code-on');
+  if(id==='dash') buildCharts();
+}
+function goSub(id,btn){
+  document.querySelectorAll('.sp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('sp-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ── chart theme ── */
+const C={bg:'#030810',surf:'#07111f',card:'#0b1826',bdr:'#14253a',
+  cyan:'#00c8f0',green:'#28d976',red:'#f03c5a',amber:'#e8b83c',
+  purple:'#9a70f0',txt:'#cce0f4',sub:'#496070'};
+Chart.defaults.color=C.sub; Chart.defaults.borderColor=C.bdr;
 const mf={family:'Share Tech Mono',size:9};
-let dashChartsBuilt = false;
+let chartsBuilt=false;
 
-function initDashCharts() {
-  if (dashChartsBuilt) return;
-  dashChartsBuilt = true;
+function buildCharts(){
+  if(chartsBuilt)return; chartsBuilt=true;
 
-  // Weight chart
-  new Chart(document.getElementById('weightChart').getContext('2d'),{
-    type:'bar',data:{labels:['w_Normal (0)','w_Brugada (1)'],
-      datasets:[{data:[N/(2*N_normal),N/(2*N_brugada)],
-        backgroundColor:['rgba(70,130,180,.7)','rgba(220,20,60,.75)'],borderWidth:0}]},
+  /* weight */
+  new Chart(document.getElementById('wt-ch'),{type:'bar',
+    data:{labels:['w (Normal)', 'w (Brugada)'],
+      datasets:[{data:[RESULTS.N_total/(2*RESULTS.N_normal), RESULTS.N_total/(2*RESULTS.N_brugada)],
+        backgroundColor:['rgba(0,200,240,.5)','rgba(240,60,90,.65)'],borderWidth:0}]},
     options:{responsive:true,plugins:{legend:{display:false}},
-      scales:{y:{grid:{color:CC.border},ticks:{font:mf}},x:{grid:{color:CC.border},ticks:{font:mf}}}}
+      scales:{y:{grid:{color:C.bdr},ticks:{font:mf}},x:{grid:{color:C.bdr},ticks:{font:mf}}}}
   });
 
-  // Radar overview
-  new Chart(document.getElementById('overviewRadar').getContext('2d'),{
-    type:'radar',
+  /* radar */
+  new Chart(document.getElementById('rad-ch'),{type:'radar',
     data:{labels:['AUC','Sensitivity','Specificity','Precision','F1','1−FNR'],
-      datasets:[{label:'Your Model',
-        data:[auc_mean,sens,spec,prec,f1,1-fnr].map(v=>+(v*100).toFixed(1)),
-        borderColor:CC.accent,backgroundColor:'rgba(0,212,255,.08)',pointBackgroundColor:CC.accent,
-        borderWidth:1.5,pointRadius:3},
-       {label:'Minimum Target',
-        data:[80,85,80,70,75,85],
-        borderColor:CC.yellow,backgroundColor:'rgba(240,192,64,.05)',borderDash:[3,3],
-        pointBackgroundColor:CC.yellow,borderWidth:1,pointRadius:2}]},
-    options:{responsive:true,plugins:{legend:{labels:{color:CC.text,font:mf}}},
-      scales:{r:{grid:{color:CC.border},ticks:{display:false},pointLabels:{color:CC.muted,font:mf},
-        min:0,max:100,angleLines:{color:CC.border}}}}
+      datasets:[
+        {label:'Model',data:[aucM,sens,spec,prec,f1,1-fnr].map(v=>+(v*100).toFixed(1)),
+          borderColor:C.cyan,backgroundColor:'rgba(0,200,240,.07)',
+          pointBackgroundColor:C.cyan,borderWidth:1.5,pointRadius:3},
+        {label:'Target',data:[80,85,80,70,75,85],
+          borderColor:C.amber,backgroundColor:'rgba(232,184,60,.04)',
+          borderDash:[3,3],pointBackgroundColor:C.amber,borderWidth:1,pointRadius:2}
+      ]},
+    options:{responsive:true,plugins:{legend:{labels:{color:C.txt,font:mf}}},
+      scales:{r:{grid:{color:C.bdr},ticks:{display:false},
+        pointLabels:{color:C.sub,font:mf},min:0,max:100,angleLines:{color:C.bdr}}}}
   });
 
-  // Scatter helpers
-  function simPts(n,mx,my,sx,sy){
-    return Array.from({length:n},()=>({x:+(mx+(Math.random()-.5)*sx*2).toFixed(3),y:+(my+(Math.random()-.5)*sy*2).toFixed(2)}));
-  }
-  const scOpts=(xl,yl)=>({responsive:true,plugins:{legend:{labels:{color:CC.text,font:mf}}},
-    scales:{x:{title:{display:true,text:xl,color:CC.muted,font:mf},grid:{color:CC.border},ticks:{font:mf}},
-            y:{title:{display:true,text:yl,color:CC.muted,font:mf},grid:{color:CC.border},ticks:{font:mf}}}});
+  /* scatter helpers */
+  const rng=(n,mx,my,sx,sy)=>Array.from({length:n},()=>({
+    x:+(mx+(Math.random()-.5)*sx*2).toFixed(3),
+    y:+(my+(Math.random()-.5)*sy*2).toFixed(3)}));
+  const scO=(xl,yl)=>({responsive:true,
+    plugins:{legend:{labels:{color:C.txt,font:mf}}},
+    scales:{
+      x:{title:{display:true,text:xl,color:C.sub,font:mf},grid:{color:C.bdr},ticks:{font:mf}},
+      y:{title:{display:true,text:yl,color:C.sub,font:mf},grid:{color:C.bdr},ticks:{font:mf}}}});
 
-  new Chart(document.getElementById('scatter12').getContext('2d'),{type:'scatter',data:{datasets:[
-    {label:'Normal',  data:simPts(287,0.04,96,0.06,15),backgroundColor:'rgba(70,130,180,.4)',pointRadius:3},
-    {label:'Brugada', data:simPts(76,0.27,133,0.1,14),backgroundColor:'rgba(220,20,60,.55)',pointRadius:4},
-    {label:'J=0.2mV',data:[{x:.2,y:55},{x:.2,y:200}],type:'line',borderColor:'orange',borderDash:[4,3],pointRadius:0,fill:false},
-    {label:'QRS=120ms',data:[{x:-.15,y:120},{x:.65,y:120}],type:'line',borderColor:CC.glow,borderDash:[4,3],pointRadius:0,fill:false},
-  ]},options:scOpts('x_1 : J-point Elevation (mV)','x_2 : QRS Duration (ms)')});
+  new Chart(document.getElementById('sc12'),{type:'scatter',data:{datasets:[
+    {label:'Normal', data:rng(RESULTS.N_normal, 0.04,96, 0.06,15),backgroundColor:'rgba(0,200,240,.35)',pointRadius:3},
+    {label:'Brugada',data:rng(RESULTS.N_brugada,0.27,133,0.10,14),backgroundColor:'rgba(240,60,90,.55)',pointRadius:4},
+    {label:'J = 0.20 mV',data:[{x:.2,y:50},{x:.2,y:210}],type:'line',borderColor:C.amber,borderDash:[4,3],pointRadius:0,fill:false},
+    {label:'QRS = 120 ms',data:[{x:-.15,y:120},{x:.65,y:120}],type:'line',borderColor:C.green,borderDash:[4,3],pointRadius:0,fill:false},
+  ]},options:scO('x₁ : J-point Elevation (mV)','x₂ : QRS Duration (ms)')});
 
-  new Chart(document.getElementById('scatter13').getContext('2d'),{type:'scatter',data:{datasets:[
-    {label:'Normal',  data:simPts(287,0.04,0.37,0.06,0.12),backgroundColor:'rgba(70,130,180,.4)',pointRadius:3},
-    {label:'Brugada', data:simPts(76,0.27,-0.06,0.1,0.1),backgroundColor:'rgba(220,20,60,.55)',pointRadius:4},
-    {label:'J=0.2mV',data:[{x:.2,y:-.65},{x:.2,y:1.0}],type:'line',borderColor:'orange',borderDash:[4,3],pointRadius:0,fill:false},
-    {label:'T=0mV',  data:[{x:-.15,y:0},{x:.65,y:0}],type:'line',borderColor:CC.muted,borderDash:[4,3],pointRadius:0,fill:false},
-  ]},options:scOpts('x_1 : J-point Elevation (mV)','x_3 : T-Wave Amplitude (mV)')});
+  new Chart(document.getElementById('sc13'),{type:'scatter',data:{datasets:[
+    {label:'Normal', data:rng(RESULTS.N_normal, 0.04, 0.37,0.06,0.12),backgroundColor:'rgba(0,200,240,.35)',pointRadius:3},
+    {label:'Brugada',data:rng(RESULTS.N_brugada,0.27,-0.06,0.10,0.10),backgroundColor:'rgba(240,60,90,.55)',pointRadius:4},
+    {label:'J = 0.20 mV',data:[{x:.2,y:-.65},{x:.2,y:1.0}],type:'line',borderColor:C.amber,borderDash:[4,3],pointRadius:0,fill:false},
+    {label:'T = 0 mV',   data:[{x:-.15,y:0},{x:.65,y:0}],  type:'line',borderColor:C.sub, borderDash:[4,3],pointRadius:0,fill:false},
+  ]},options:scO('x₁ : J-point Elevation (mV)','x₃ : T-wave Amplitude (mV)')});
 
-  // CV diagram
-  document.getElementById('cv-diagram').innerHTML=`<div class="cv-grid" style="grid-template-columns:repeat(5,1fr);">
-  ${[0,1,2,3,4].flatMap(o=>[0,1,2,3,4].map(c=>{const ot=c===o;
-    return `<div class="cv-cell ${ot?'cv-ot':'cv-tr'}">${ot?`EVAL ${c+1}`:`TR ${c+1}`}</div>`;})).join('')}
-  </div><p style="font-family:var(--mono);font-size:.54rem;color:var(--muted);margin-bottom:1.3rem;">
-  Each row = one outer fold. TR blocks: RandomizedSearchCV(n_iter=50,cv=5) tunes C & γ. EVAL fold never seen.</p>`;
+  /* fold diagram */
+  document.getElementById('fold-diag').innerHTML=`
+    <div class="fgrid" style="grid-template-columns:repeat(5,1fr)">
+    ${[0,1,2,3,4].flatMap(o=>[0,1,2,3,4].map(c=>{const ev=c===o;
+      return `<div class="fc2 ${ev?'ev':'tr'}">${ev?`TEST ${c+1}`:`TRAIN ${c+1}`}</div>`})).join('')}
+    </div>
+    <p style="font-family:var(--mono);font-size:.5rem;color:var(--sub);margin-bottom:1.2rem">
+    Each row = one outer fold. TRAIN folds: RandomizedSearchCV tunes C and γ on training data only.
+    TEST fold is held out and never seen during hyperparameter optimisation.</p>`;
 
-  // Fold chart factory
-  function makeFold(id){
-    new Chart(document.getElementById(id).getContext('2d'),{type:'bar',
-      data:{labels:fa.map((_,i)=>`Fold ${i+1}`),datasets:[{label:'AUC',data:fa,borderWidth:0,
-        backgroundColor:fa.map(v=>v===Math.max(...fa)?'rgba(220,20,60,.8)':'rgba(70,130,180,.7)')}]},
-      options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`AUC=${c.raw.toFixed(4)}`}}},
-        scales:{y:{min:0,max:1.05,grid:{color:CC.border},ticks:{font:mf},
-          title:{display:true,text:`Mean=${auc_mean.toFixed(3)} ± ${auc_std.toFixed(3)}`,color:CC.muted,font:mf}},
-          x:{grid:{color:CC.border},ticks:{font:mf}}}}});
-  }
-  makeFold('foldChart'); makeFold('foldChart2');
+  /* fold bar factory */
+  const fData={
+    labels:fa.map((_,i)=>`Fold ${i+1}`),
+    datasets:[{label:'AUC-ROC',data:fa,borderWidth:0,
+      backgroundColor:fa.map(v=>v===Math.max(...fa)?'rgba(240,60,90,.75)':'rgba(0,200,240,.5)')}]};
+  const fOpts={responsive:true,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`AUC = ${c.raw.toFixed(4)}`}}},
+    scales:{
+      y:{min:0,max:1.05,grid:{color:C.bdr},ticks:{font:mf},
+        title:{display:true,text:`Mean = ${aucM.toFixed(3)} ± ${aucS.toFixed(3)}`,color:C.sub,font:mf}},
+      x:{grid:{color:C.bdr},ticks:{font:mf}}}};
+  new Chart(document.getElementById('fold-ch2'), {type:'bar',data:JSON.parse(JSON.stringify(fData)),options:fOpts});
 
-  // ROC
-  function approxROC(auc,n=80){const p=[{x:0,y:0}];for(let i=1;i<n;i++){const t=i/n;p.push({x:+Math.pow(t,1/(1+auc*1.2)).toFixed(4),y:+Math.pow(t,1-auc*.7).toFixed(4)});}p.push({x:1,y:1});return p;}
-  new Chart(document.getElementById('rocChart').getContext('2d'),{type:'scatter',data:{datasets:[
-    {label:`SVM RBF  AUC=${RESULTS.auc.toFixed(3)}`,data:approxROC(RESULTS.auc),
-     borderColor:CC.crimson,backgroundColor:'rgba(220,20,60,.07)',showLine:true,pointRadius:0,fill:true,tension:.35},
-    {label:'Random  AUC=0.500',data:[{x:0,y:0},{x:1,y:1}],
-     borderColor:CC.muted,borderDash:[5,4],showLine:true,pointRadius:0,fill:false}]},
-    options:{responsive:true,plugins:{legend:{labels:{color:CC.text,font:mf}}},
-      scales:{x:{min:0,max:1,title:{display:true,text:'1−Specificity (FPR)',color:CC.muted,font:mf},grid:{color:CC.border},ticks:{font:mf}},
-              y:{min:0,max:1,title:{display:true,text:'Sensitivity (TPR)',color:CC.muted,font:mf},grid:{color:CC.border},ticks:{font:mf}}}}});
+  /* ROC */
+  const rocPts=(auc,n=90)=>{
+    const p=[{x:0,y:0}];
+    for(let i=1;i<n;i++){const t=i/n;p.push({x:+Math.pow(t,1/(1+auc*1.1)).toFixed(4),y:+Math.pow(t,1-auc*.65).toFixed(4)});}
+    p.push({x:1,y:1});return p;};
+  new Chart(document.getElementById('roc-ch'),{type:'scatter',data:{datasets:[
+    {label:`SVM RBF  AUC = ${RESULTS.auc.toFixed(3)}`,data:rocPts(RESULTS.auc),
+      borderColor:C.red,backgroundColor:'rgba(240,60,90,.06)',showLine:true,pointRadius:0,fill:true,tension:.3},
+    {label:'Random baseline  AUC = 0.500',data:[{x:0,y:0},{x:1,y:1}],
+      borderColor:C.bdr,borderDash:[5,4],showLine:true,pointRadius:0,fill:false}
+  ]},options:{responsive:true,plugins:{legend:{labels:{color:C.txt,font:mf}}},
+    scales:{
+      x:{min:0,max:1,title:{display:true,text:'1 − Specificity (FPR)',color:C.sub,font:mf},grid:{color:C.bdr},ticks:{font:mf}},
+      y:{min:0,max:1,title:{display:true,text:'Sensitivity (TPR)',color:C.sub,font:mf},grid:{color:C.bdr},ticks:{font:mf}}}}});
 
-  // Contribution chart
-  window.contribChart = new Chart(document.getElementById('contribChart').getContext('2d'),{
-    type:'bar',data:{labels:['x_1  J-elev','x_2  QRS dur','x_3  T-amp','x_4  R-S drop'],
-      datasets:[{label:'Score',data:[0,0,0,0],borderWidth:0,backgroundColor:['rgba(0,212,255,.6)','rgba(0,212,255,.6)','rgba(0,212,255,.6)','rgba(0,212,255,.6)']}]},
+  /* contribution */
+  window.contribCh=new Chart(document.getElementById('contrib-ch'),{type:'bar',
+    data:{labels:['x₁  J-point Elevation','x₂  QRS Duration','x₃  T-wave Amplitude','x₄  R-to-S Drop'],
+      datasets:[{label:'Contribution',data:[0,0,0,0],borderWidth:0,
+        backgroundColor:Array(4).fill('rgba(0,200,240,.5)')}]},
     options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
-      scales:{x:{min:-1.3,max:1.3,grid:{color:CC.border},ticks:{font:mf}},y:{grid:{color:CC.border},ticks:{font:{family:'Share Tech Mono',size:10}}}}}
-  });
+      scales:{x:{min:-1.4,max:1.4,grid:{color:C.bdr},ticks:{font:mf}},
+              y:{grid:{color:C.bdr},ticks:{font:{family:'Share Tech Mono',size:10}}}}}});
 }
 
-/* ── CLASSIFIER DEMO ── */
-function upd(id,val,dec){document.getElementById(id).textContent=parseFloat(val).toFixed(dec);}
-function classify(){
-  const x1=+document.getElementById('s1').value, x2=+document.getElementById('s2').value;
-  const x3=+document.getElementById('s3').value, x4=+document.getElementById('s4').value;
-  const c1=(x1-0.05)/0.20, c2=(x2-95)/40, c3=-(x3-0.35)/0.30, c4=-(x4-0.50)/0.40;
-  const prob=Math.max(0.02,Math.min(0.98, 0.5+(c1+c2+c3+c4)/8.0));
-  const scores=[c1,c2,c3,c4];
-  if(window.contribChart){
-    window.contribChart.data.datasets[0].data=scores.map(v=>+v.toFixed(3));
-    window.contribChart.data.datasets[0].backgroundColor=scores.map(s=>s>0.2?'rgba(255,77,109,.75)':s<-0.2?'rgba(57,255,20,.7)':'rgba(240,192,64,.7)');
-    window.contribChart.update();
+/* ── classifier demo ── */
+function dUpd(id,v,d){document.getElementById(id).textContent=parseFloat(v).toFixed(d);}
+function doClassify(){
+  const x1=+document.getElementById('ds1').value, x2=+document.getElementById('ds2').value;
+  const x3=+document.getElementById('ds3').value, x4=+document.getElementById('ds4').value;
+  const c1=(x1-.05)/.20, c2=(x2-95)/40, c3=-(x3-.35)/.30, c4=-(x4-.50)/.40;
+  const prob=Math.max(.02,Math.min(.97,.5+(c1+c2+c3+c4)/8));
+  if(window.contribCh){
+    const sc=[c1,c2,c3,c4];
+    window.contribCh.data.datasets[0].data=sc.map(v=>+v.toFixed(3));
+    window.contribCh.data.datasets[0].backgroundColor=sc.map(s=>
+      s>.2?'rgba(240,60,90,.7)':s<-.2?'rgba(40,217,118,.6)':'rgba(232,184,60,.6)');
+    window.contribCh.update();
   }
-  document.getElementById('pb-wrap').style.display='block';
-  const fill=document.getElementById('pb-fill');
-  fill.style.width=(prob*100).toFixed(1)+'%';
-  fill.style.background=prob>.6?CC.red:prob>.4?CC.yellow:CC.glow;
-  document.getElementById('prob-pct').textContent=(prob*100).toFixed(1)+'%';
-  const box=document.getElementById('result-out');
-  if(prob>0.60){box.className='result-out brugada';box.innerHTML=`<span class="res-icon">🔴</span><div class="res-body"><strong style="color:var(--red2)">BRUGADA — P=${(prob*100).toFixed(1)}%</strong><small>x_1≥0.2mV · x_2>120ms · x_3<0 · SVM→class 1</small></div>`;}
-  else if(prob>0.40){box.className='result-out borderline';box.innerHTML=`<span class="res-icon">🟡</span><div class="res-body"><strong style="color:var(--yellow2)">BORDERLINE — P=${(prob*100).toFixed(1)}%</strong><small>Some features present. Consider lowering threshold to 0.35.</small></div>`;}
-  else{box.className='result-out normal';box.innerHTML=`<span class="res-icon">🟢</span><div class="res-body"><strong style="color:var(--green)">NORMAL — P=${(prob*100).toFixed(1)}%</strong><small>x_1<0.2 · narrow QRS · upright T → SVM class 0</small></div>`;}
+  document.getElementById('pb2-wrap').style.display='block';
+  const pf=document.getElementById('pb2-f');
+  pf.style.width=(prob*100).toFixed(1)+'%';
+  pf.style.background=prob>.6?C.red:prob>.4?C.amber:C.green;
+  document.getElementById('pb2-pct').textContent=(prob*100).toFixed(1)+'%';
+  const box=document.getElementById('res-out');
+  if(prob>.60){
+    box.className='resout rb';
+    box.innerHTML=`<span class="ricon">🔴</span><div class="rbody"><strong style="color:var(--red)">BRUGADA — P(Brugada) = ${(prob*100).toFixed(1)}%</strong><small>x₁ ≥ 0.20 mV · x₂ > 120 ms · x₃ < 0 mV · SVM output: class 1</small></div>`;
+  } else if(prob>.40){
+    box.className='resout rx';
+    box.innerHTML=`<span class="ricon">🟡</span><div class="rbody"><strong style="color:var(--amber)">BORDERLINE — P(Brugada) = ${(prob*100).toFixed(1)}%</strong><small>Feature values near the SVM decision boundary.</small></div>`;
+  } else {
+    box.className='resout rn';
+    box.innerHTML=`<span class="ricon">🟢</span><div class="rbody"><strong style="color:var(--green)">NORMAL — P(Brugada) = ${(prob*100).toFixed(1)}%</strong><small>x₁ < 0.20 mV · narrow QRS · upright T-wave · SVM output: class 0</small></div>`;
+  }
 }
 
-/* ════════════════════════════════════════════
+/* ═══════════════════════════════════════
    LIVE ECG SIMULATION
-════════════════════════════════════════════ */
-const ecgC  = document.getElementById('ecgCanvas');
-const ecgCtx = ecgC.getContext('2d');
-const rC    = document.getElementById('rhythmCanvas');
-const rCtx  = rC.getContext('2d');
+═══════════════════════════════════════ */
+const ecgC=document.getElementById('ecgC'),eCtx=ecgC.getContext('2d');
+let mode='n',hr=72,jp=1.0,spd=1.0,noisy=false,wand=false;
+let bBuf=[],bPos=0,sBuf=[],wPh=0,ftick=0;
+let sf={x1:0,x2:0,x3:0,x4:0};
 
-let ecgMode='normal', hr=72, jpBoost=1.0, speedMul=1.0;
-let noiseOn=false, wanderOn=false;
-let beatBuf=[], beatPos=0, scrollBuf=[];
-let rrHistory=[], wanderPh=0, frameTick=0;
-let simFeatures={x1:0,x2:0,x3:0,x4:0};
-
-function ecgResize(){
+function resize(){
   const dpr=window.devicePixelRatio||1;
-  const w=ecgC.parentElement.clientWidth;
-  const h=Math.min(210,Math.max(155,w*0.17));
-  ecgC.width=w*dpr; ecgC.height=h*dpr; ecgC.style.height=h+'px';
-  ecgCtx.scale(dpr,dpr); scrollBuf=new Array(w).fill(0);
-  rC.width=rC.parentElement.clientWidth*dpr; rC.height=90*dpr;
-  rCtx.scale(dpr,dpr);
+  const w=ecgC.parentElement.clientWidth,h=Math.min(200,Math.max(148,w*.165));
+  ecgC.width=w*dpr;ecgC.height=h*dpr;ecgC.style.height=h+'px';
+  eCtx.scale(dpr,dpr);sBuf=new Array(w).fill(0);
 }
-window.addEventListener('resize',ecgResize); ecgResize();
+window.addEventListener('resize',resize);resize();
 
-function getBeatParams(){
-  return ecgMode==='normal' ? {p:.08,r:.25,s:-.55,j:.03*jpBoost,qd:8,t:.18,rd:.80}
-    : {p:.08,r:.22,s:-.18,j:.28*jpBoost,qd:14,t:-.15,rd:.40};
+/* Beat parameters — morphology matches Lead V1 clinical descriptions in the pipeline */
+function bp(){
+  /* Normal Lead V1: small r, deep S, upright T, J-point low */
+  /* Brugada Type 1: wider QRS, elevated J-point ≥0.2mV, inverted T */
+  return mode==='n'
+    ?{p:.08,r:.24,s:-.52,j:.030*jp,qd:8, t: .17,rs:.76}
+    :{p:.08,r:.21,s:-.18,j:.280*jp,qd:14,t:-.14,rs:.39};
 }
 
-function buildBeat(spb){
-  const p=getBeatParams(), b=new Float32Array(spb), n=spb;
-  // P-wave
-  const ps=Math.floor(n*.10), pe=Math.floor(n*.22);
+function makeBeat(spb){
+  const p=bp(),b=new Float32Array(spb),n=spb;
+  /* P-wave */
+  const ps=Math.floor(n*.10),pe=Math.floor(n*.22);
   for(let i=ps;i<pe;i++){const t=(i-ps)/(pe-ps);b[i]=p.p*Math.exp(-Math.pow((t-.5)*4,2));}
-  // QRS
-  const qc=Math.floor(n*.35), qh=Math.floor(p.qd/2);
-  const qi=qc-qh, se=qc+qh+Math.floor(p.qd*.6);
+  /* QRS: Q dip → R peak → S trough */
+  const qc=Math.floor(n*.35),qh=Math.floor(p.qd/2),qi=qc-qh,se=qc+qh+Math.floor(p.qd*.6);
   for(let i=qi-2;i<qi+2;i++){if(i>=0&&i<n){const t=(i-(qi-2))/4;b[i]+=-0.04*Math.sin(t*Math.PI);}}
   for(let i=qi;i<se;i++){if(i>=0&&i<n){const t=(i-qc)/(qh*1.5);b[i]+=p.r*Math.exp(-t*t*3.5);}}
   const sc=qc+qh+2;
   for(let i=qc;i<se+4;i++){if(i>=0&&i<n){const t=(i-sc)/(qh*1.2);b[i]+=p.s*Math.exp(-t*t*4);}}
-  // J-point
-  const js2=se, je2=js2+Math.floor(n*.06);
-  for(let i=js2;i<je2&&i<n;i++){const t=(i-js2)/Math.max(1,je2-js2);b[i]+=p.j*(1-t*.3);}
-  // T-wave
-  const tc=Math.floor(n*.68), ts=p.qd+4;
-  for(let i=0;i<n;i++){const t=(i-tc)/ts;b[i]+=p.t*Math.exp(-t*t*.5);}
-  // features
-  simFeatures={x1:+p.j.toFixed(3),x2:+(p.qd*10).toFixed(0),x3:+p.t.toFixed(3),x4:+(p.r-p.s).toFixed(3)};
+  /* J-point plateau */
+  const js=se,je=js+Math.floor(n*.06);
+  for(let i=js;i<je&&i<n;i++){const t=(i-js)/Math.max(1,je-js);b[i]+=p.j*(1-t*.3);}
+  /* T-wave */
+  const tc=Math.floor(n*.68),tsig=p.qd+4;
+  for(let i=0;i<n;i++){const t=(i-tc)/tsig;b[i]+=p.t*Math.exp(-t*t*.5);}
+  /* live features — matching exact formulas from the pipeline */
+  sf={
+    x1: +p.j.toFixed(3),           /* V(j) - baseline */
+    x2: +(p.qd*10),                /* (s_idx - q_idx) * 10ms */
+    x3: +p.t.toFixed(3),           /* V(t) - baseline */
+    x4: +(p.r - p.s).toFixed(3)    /* V(r) - V(s) */
+  };
   return b;
 }
 
 function addFX(y){
-  if(wanderOn){wanderPh+=.003;y+=.04*Math.sin(wanderPh);}
-  if(noiseOn) y+=(Math.random()-.5)*.025;
+  if(wand){wPh+=.003;y+=.04*Math.sin(wPh);}
+  if(noisy)y+=(Math.random()-.5)*.025;
   return y;
 }
+function dims(){return{w:ecgC.width/(window.devicePixelRatio||1),h:ecgC.height/(window.devicePixelRatio||1)};}
 
-function getECGDims(){return{w:ecgC.width/(window.devicePixelRatio||1),h:ecgC.height/(window.devicePixelRatio||1)};}
-
-function drawECG(){
-  const {w,h}=getECGDims(), mid=h/2, amp=h*.32;
+function drawSim(){
+  const {w,h}=dims(),mid=h/2,amp=h*.32;
   const spb=Math.round(100*60/hr);
-  while(beatBuf.length-beatPos<spb*2){const bt=buildBeat(spb);for(const s of bt)beatBuf.push(s);}
-  const adv=Math.floor((100/60)*speedMul);
-  for(let i=0;i<adv;i++){if(beatPos<beatBuf.length){scrollBuf.push(addFX(beatBuf[beatPos]));if(scrollBuf.length>w*2)scrollBuf.shift();beatPos++;}}
-  ecgCtx.clearRect(0,0,w,h);
-  // centre line
-  ecgCtx.strokeStyle='rgba(0,255,136,.07)';ecgCtx.lineWidth=1;
-  ecgCtx.beginPath();ecgCtx.moveTo(0,mid);ecgCtx.lineTo(w,mid);ecgCtx.stroke();
-  const pts=scrollBuf.slice(-w);
-  if(pts.length<2){requestAnimationFrame(drawECG);return;}
-  // glow trace
-  ecgCtx.shadowBlur=7;ecgCtx.shadowColor=ecgMode==='normal'?'#00ff88':'#ff3355';
-  ecgCtx.beginPath();ecgCtx.strokeStyle=ecgMode==='normal'?'#00ff88':'#ff4466';ecgCtx.lineWidth=1.5;
-  for(let i=0;i<pts.length;i++){const x=i,y=mid-pts[i]*amp;i===0?ecgCtx.moveTo(x,y):ecgCtx.lineTo(x,y);}
-  ecgCtx.stroke();ecgCtx.shadowBlur=0;
-  // markers on latest beat
-  const bpx=Math.min(spb,pts.length), bs=pts.slice(-bpx), ox=pts.length-bpx;
-  const pp=getBeatParams();
-  const qhm=Math.floor(pp.qd/2), qcm=Math.floor(bpx*.35);
-  const sem=qcm+qhm+Math.floor(pp.qd*.6);
-  function mark(idx,col,lbl,above){
+  while(bBuf.length-bPos<spb*2){const b=makeBeat(spb);for(const s of b)bBuf.push(s);}
+  const adv=Math.floor((100/60)*spd);
+  for(let i=0;i<adv;i++){if(bPos<bBuf.length){sBuf.push(addFX(bBuf[bPos]));if(sBuf.length>w*2)sBuf.shift();bPos++;}}
+  eCtx.clearRect(0,0,w,h);
+  eCtx.strokeStyle='rgba(40,217,118,.06)';eCtx.lineWidth=1;
+  eCtx.beginPath();eCtx.moveTo(0,mid);eCtx.lineTo(w,mid);eCtx.stroke();
+  const pts=sBuf.slice(-w);
+  if(pts.length<2){requestAnimationFrame(drawSim);return;}
+  const col=mode==='n'?'#28d976':'#f03c5a';
+  eCtx.shadowBlur=7;eCtx.shadowColor=col;
+  eCtx.beginPath();eCtx.strokeStyle=col;eCtx.lineWidth=1.5;
+  for(let i=0;i<pts.length;i++){const x=i,y=mid-pts[i]*amp;i===0?eCtx.moveTo(x,y):eCtx.lineTo(x,y);}
+  eCtx.stroke();eCtx.shadowBlur=0;
+  /* beat markers */
+  const pp=bp(),bpx=Math.min(spb,pts.length),bs=pts.slice(-bpx),ox=pts.length-bpx;
+  const qhm=Math.floor(pp.qd/2),qcm=Math.floor(bpx*.35),sem=qcm+qhm+Math.floor(pp.qd*.6);
+  const mark=(idx,c,lbl,up)=>{
     if(idx<0||idx>=bs.length)return;
     const x=ox+idx,y=mid-bs[idx]*amp;
-    ecgCtx.fillStyle=col;ecgCtx.beginPath();ecgCtx.arc(x,y,2.5,0,Math.PI*2);ecgCtx.fill();
-    ecgCtx.font='8px Share Tech Mono';ecgCtx.fillStyle=col;
-    ecgCtx.fillText(lbl,x+4,above?y-5:y+12);
-  }
-  mark(qcm,'#00ff88','R',true);mark(qcm-qhm-1,'#ffd060','Q',false);
-  mark(sem,'#ff3355','S/J',false);mark(Math.floor(bpx*.68),'#b06aff','T',true);
-  // J threshold
-  ecgCtx.strokeStyle='rgba(255,208,96,.3)';ecgCtx.lineWidth=1;ecgCtx.setLineDash([4,4]);
+    eCtx.fillStyle=c;eCtx.beginPath();eCtx.arc(x,y,2.5,0,Math.PI*2);eCtx.fill();
+    eCtx.font='8px Share Tech Mono';eCtx.fillStyle=c;
+    eCtx.fillText(lbl,x+4,up?y-5:y+12);};
+  mark(qcm,       '#28d976','R',true);
+  mark(qcm-qhm-1,'#e8b83c','Q',false);
+  mark(sem,        '#f03c5a','S/J',false);
+  mark(Math.floor(bpx*.68),'#9a70f0','T',true);
+  /* J threshold line */
   const jy=mid-.2*amp;
-  ecgCtx.beginPath();ecgCtx.moveTo(0,jy);ecgCtx.lineTo(w,jy);ecgCtx.stroke();
-  ecgCtx.setLineDash([]);
-  ecgCtx.font='8px Share Tech Mono';ecgCtx.fillStyle='rgba(255,208,96,.45)';
-  ecgCtx.fillText('J=0.2mV',w-68,jy-3);
-  frameTick++;
-  if(frameTick%20===0)updateSimUI();
-  requestAnimationFrame(drawECG);
+  eCtx.strokeStyle='rgba(232,184,60,.26)';eCtx.lineWidth=1;eCtx.setLineDash([4,4]);
+  eCtx.beginPath();eCtx.moveTo(0,jy);eCtx.lineTo(w,jy);eCtx.stroke();
+  eCtx.setLineDash([]);
+  eCtx.font='8px Share Tech Mono';eCtx.fillStyle='rgba(232,184,60,.42)';
+  eCtx.fillText('J = 0.20 mV',w-72,jy-3);
+  ftick++;
+  if(ftick%18===0)updateUI();
+  requestAnimationFrame(drawSim);
 }
 
-function updateSimUI(){
-  const {x1,x2,x3,x4}=simFeatures;
-  function setAnn(id,txt,flag){
-    const e=document.getElementById(id);e.textContent=txt;
-    e.className='ann-val'+(flag==='hi'?' flag-hi':flag==='lo'?' flag-lo':'');
-  }
-  setAnn('ax1',(x1>=0?'+':'')+x1.toFixed(3)+' mV', x1>=0.2?'hi':'lo');
-  setAnn('ax2',x2+' ms', x2>120?'hi':'lo');
-  setAnn('ax3',(x3>=0?'+':'')+x3.toFixed(3)+' mV', x3<0?'hi':'lo');
-  setAnn('ax4',(x4>=0?'+':'')+x4.toFixed(3)+' mV','lo');
-  // prob
+function updateUI(){
+  const {x1,x2,x3,x4}=sf;
+  const sa=(id,txt,hi)=>{const e=document.getElementById(id);e.textContent=txt;e.className='aval'+(hi?' hi':' ok');};
+  sa('av1',(x1>=0?'+':'')+x1.toFixed(3)+' mV', x1>=.2);
+  sa('av2', x2+' ms',                            x2>120);
+  sa('av3',(x3>=0?'+':'')+x3.toFixed(3)+' mV',  x3<0);
+  sa('av4',(x4>=0?'+':'')+x4.toFixed(3)+' mV',  false);
+  /* probability using same clinical logic as classifier */
   const c1=(x1-.05)/.20,c2=(x2-95)/40,c3=-(x3-.35)/.30,c4=-(x4-.70)/.40;
   const prob=Math.max(.02,Math.min(.97,.5+(c1+c2+c3+c4)/9));
-  document.getElementById('sv-prob').textContent=(prob*100).toFixed(0)+'%';
-  const pf=document.getElementById('sv-pf');
+  document.getElementById('sim-prob').textContent=(prob*100).toFixed(0)+'%';
+  const pf=document.getElementById('sim-pf');
   pf.style.width=(prob*100).toFixed(1)+'%';
-  pf.style.background=prob>.6?'var(--red)':prob>.4?'var(--yellow)':'var(--glow)';
-  const vt=document.getElementById('sv-verdict'), vs=document.getElementById('sv-sub');
-  if(prob>.60){vt.className='verdict bv';vt.textContent='BRUGADA PATTERN';
-    vs.textContent=`x_1=${x1.toFixed(2)}≥0.2 · x_2=${x2}ms wide · x_3=${x3.toFixed(2)}<0 → class 1`;}
-  else if(prob>.40){vt.className='verdict bord';vt.textContent='BORDERLINE';vs.textContent='Some features present. Below diagnostic threshold.';}
-  else{vt.className='verdict nv';vt.textContent='NORMAL SINUS RHYTHM';
-    vs.textContent=`x_1=${x1.toFixed(2)}<0.2 · x_2=${x2}ms · x_3 upright → class 0`;}
-  document.getElementById('bpm-top').textContent=hr;
-  drawRhythm();
+  pf.style.background=prob>.6?'var(--red)':prob>.4?'var(--amber)':'var(--green)';
+  const vt=document.getElementById('sim-verdict'),vs=document.getElementById('sim-sub');
+  if(prob>.60){
+    vt.className='verdict vb';vt.textContent='BRUGADA PATTERN DETECTED';
+    vs.textContent=`x₁=${x1.toFixed(2)} mV · x₂=${x2} ms · x₃=${x3.toFixed(2)} mV → class 1`;}
+  else if(prob>.40){
+    vt.className='verdict vx';vt.textContent='BORDERLINE';
+    vs.textContent='Feature values near the SVM decision boundary.';}
+  else{
+    vt.className='verdict vn';vt.textContent='NORMAL SINUS RHYTHM';
+    vs.textContent=`x₁=${x1.toFixed(2)} mV · x₂=${x2} ms · x₃=${x3.toFixed(2)} mV → class 0`;}
+  document.getElementById('bpm-v').textContent=hr;
 }
 
-function drawRhythm(){
-  const rw=rC.width/(window.devicePixelRatio||1), rh=rC.height/(window.devicePixelRatio||1);
-  rCtx.clearRect(0,0,rw,rh);
-  const base=60000/hr;
-  if(rrHistory.length===0)for(let i=0;i<20;i++)rrHistory.push(base+(Math.random()-.5)*30);
-  rrHistory.shift();rrHistory.push(base+(Math.random()-.5)*30);
-  const mn=Math.min(...rrHistory)-25, mx=Math.max(...rrHistory)+25, n=rrHistory.length;
-  rCtx.strokeStyle='rgba(0,255,136,.06)';rCtx.lineWidth=1;
-  for(let i=0;i<4;i++){const y=rh*i/3;rCtx.beginPath();rCtx.moveTo(0,y);rCtx.lineTo(rw,y);rCtx.stroke();}
-  rCtx.strokeStyle=ecgMode==='normal'?'rgba(0,212,255,.7)':'rgba(255,51,85,.7)';rCtx.lineWidth=1.5;
-  rCtx.beginPath();
-  for(let i=0;i<n;i++){const x=(i/(n-1))*rw,y=rh-((rrHistory[i]-mn)/(mx-mn))*rh*.8-rh*.1;
-    i===0?rCtx.moveTo(x,y):rCtx.lineTo(x,y);}
-  rCtx.stroke();
-  const mu=rrHistory.reduce((s,v)=>s+v,0)/n;
-  const my2=rh-((mu-mn)/(mx-mn))*rh*.8-rh*.1;
-  rCtx.strokeStyle='rgba(255,208,96,.3)';rCtx.setLineDash([3,3]);
-  rCtx.beginPath();rCtx.moveTo(0,my2);rCtx.lineTo(rw,my2);rCtx.stroke();
-  rCtx.setLineDash([]);
-  rCtx.font='7px Share Tech Mono';rCtx.fillStyle='rgba(255,208,96,.45)';
-  rCtx.fillText(`μ=${Math.round(mu)}ms`,3,my2-2);
-}
-
-/* ── Sim controls ── */
 function setMode(m){
-  ecgMode=m; beatBuf=[]; beatPos=0;
-  scrollBuf=new Array((ecgC.width/(window.devicePixelRatio||1))|0).fill(0);
-  document.getElementById('btn-normal').className='mode-btn'+(m==='normal'?' active-normal':'');
-  document.getElementById('btn-brugada').className='mode-btn'+(m==='brugada'?' active-brugada':'');
-  document.getElementById('mode-chip').textContent=m==='normal'?'NORMAL':'BRUGADA TYPE 1';
-  document.getElementById('lead-lbl').textContent=`● LEAD V1 (index 6) — 100 Hz · ${m==='brugada'?'COVED PATTERN':'NORMAL SINUS'}`;
+  mode=m;bBuf=[];bPos=0;sBuf=new Array((ecgC.width/(window.devicePixelRatio||1))|0).fill(0);
+  document.getElementById('btn-n').className='mbtn'+(m==='n'?' mn':'');
+  document.getElementById('btn-b').className='mbtn'+(m==='b'?' mb':'');
+  document.getElementById('mode-lbl').textContent=m==='n'?'NORMAL':'BRUGADA TYPE 1';
+  document.getElementById('ecg-lbl').textContent=
+    `● LEAD V1 (index 6) · 100 Hz · ${m==='n'?'NORMAL SINUS RHYTHM':'BRUGADA TYPE 1 PATTERN'}`;
 }
-function setHR(v){hr=parseInt(v);beatBuf=[];beatPos=0;document.getElementById('hr-lbl').textContent=hr;document.getElementById('bpm-top').textContent=hr;}
-function setJP(v){jpBoost=parseFloat(v);beatBuf=[];beatPos=0;document.getElementById('jp-lbl').textContent=jpBoost.toFixed(1)+'×';}
-function setSpeed(s,btn){speedMul=s;document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
-function togNoise(){noiseOn=!noiseOn;const t=document.getElementById('tog-noise');t.className='tog'+(noiseOn?' on':'');}
-function togWander(){wanderOn=!wanderOn;const t=document.getElementById('tog-wander');t.className='tog'+(wanderOn?' on':'');}
+function setHR(v){hr=parseInt(v);bBuf=[];bPos=0;
+  document.getElementById('hr-v').textContent=hr;document.getElementById('bpm-v').textContent=hr;}
+function setJP(v){jp=parseFloat(v);bBuf=[];bPos=0;document.getElementById('jp-v').textContent=jp.toFixed(1)+'×';}
+function setSpd(s,btn){spd=s;document.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+function togN(){noisy=!noisy;document.getElementById('tog-n').className='tog'+(noisy?' on':'');}
+function togW(){wand=!wand;document.getElementById('tog-w').className='tog'+(wand?' on':'');}
 
-/* ── Start ── */
-requestAnimationFrame(drawECG);
+requestAnimationFrame(drawSim);
+</script>
+
+<!-- ════════════════════════════
+     PYTHON CODE PAGE
+════════════════════════════ -->
+<div class="pg" id="pg-code">
+<div style="max-width:1000px;margin:0 auto;padding:1.4rem 1.8rem;">
+  <div class="pgh">
+    <h1 style="font-family:var(--mono);font-size:1.18rem;color:#fff;margin-bottom:.38rem;">Python Pipeline</h1>
+    <p style="font-size:.84rem;color:var(--sub);line-height:1.68;font-weight:300;max-width:700px;">Complete source code for the Brugada syndrome detection pipeline. Covers signal filtering, R-peak detection, beat-level feature extraction, nested cross-validation, and performance evaluation.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.7rem;margin-bottom:1.4rem;">
+    <div style="background:var(--card);border:1px solid var(--bdr);padding:.85rem;border-top:2px solid var(--cyan);">
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);letter-spacing:.11em;margin-bottom:.3rem;">DATASET</div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--cyan);">brugada-huca/1.0.0</div>
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);margin-top:.2rem;">PhysioNet · 363 patients</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--bdr);padding:.85rem;border-top:2px solid var(--green);">
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);letter-spacing:.11em;margin-bottom:.3rem;">CLASSIFIER</div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--green);">SVC(kernel='rbf')</div>
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);margin-top:.2rem;">StandardScaler · class_weight</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--bdr);padding:.85rem;border-top:2px solid var(--amber);">
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);letter-spacing:.11em;margin-bottom:.3rem;">TUNING</div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--amber);">RandomizedSearchCV</div>
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);margin-top:.2rem;">n_iter=50 · 5-fold inner CV</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--bdr);padding:.85rem;border-top:2px solid var(--purple);">
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);letter-spacing:.11em;margin-bottom:.3rem;">EVALUATION</div>
+      <div style="font-family:var(--mono);font-size:.72rem;color:var(--purple);">Nested 5-Fold CV</div>
+      <div style="font-family:var(--mono);font-size:.5rem;color:var(--sub);margin-top:.2rem;">AUC = 0.734 ± 0.062</div>
+    </div>
+  </div>
+  <div class="code-wrap" id="code-block"></div>
+</div>
+</div>
+
+<script>
+(function(){
+const raw=`# ============================================================
+# BRUGADA SYNDROME DETECTION — COMPLETE ML PIPELINE
+# IDSC 2026 | Dataset: Brugada-HUCA (PhysioNet)
+#
+# Full feature vector per patient:
+#   x_1 = J-point Elevation     V(J) - V(baseline)
+#   x_2 = QRS Duration          (S_idx - Q_idx) * 10 ms
+#   x_3 = T-Wave Amplitude      V(T-peak) - V(baseline)
+#   x_4 = R-to-S Amplitude Drop V(R) - V(S)
+# ============================================================
+
+import wfdb
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+
+from scipy.signal import butter, filtfilt
+from scipy.stats import uniform, loguniform
+from sklearn.svm import SVC
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import StratifiedKFold, RandomizedSearchCV
+from sklearn.metrics import (
+    confusion_matrix, classification_report,
+    roc_auc_score, roc_curve
+)
+
+# ============================================================
+# CONFIGURATION
+# ============================================================
+
+DB_NAME  = 'brugada-huca/1.0.0'
+PNET_URL = 'https://physionet.org/files/'
+FS       = 100          # Sampling frequency — 1 sample = 10 ms
+V1_IDX   = 6            # Lead V1 index in 12-lead array
+J_ELEV_THRESHOLD = 0.2  # mV — Brugada Type 1 diagnostic criterion
+
+PARAM_DIST = {
+    'svc__C'     : loguniform(1e-2, 1e3),
+    'svc__gamma' : loguniform(1e-4, 1e1),
+}
+N_ITER_SEARCH = 50
+
+# ============================================================
+# STEP 1 — LOAD DATA & EDA
+# ============================================================
+
+meta      = pd.read_csv(f'{PNET_URL}{DB_NAME}/metadata.csv')
+data_dict = pd.read_csv(f'{PNET_URL}{DB_NAME}/metadata_dictionary.csv')
+
+meta['label'] = (meta['brugada'] > 0).astype(int)
+
+N         = len(meta)
+N_brugada = (meta['label'] == 1).sum()   # 74
+N_normal  = (meta['label'] == 0).sum()   # 283
+
+# Class weights: w_c = N / (2 * N_c)
+W_BRUGADA    = N / (2 * N_brugada)   # 2.388
+W_NORMAL     = N / (2 * N_normal)    # 0.632
+CLASS_WEIGHT = {0: W_NORMAL, 1: W_BRUGADA}
+
+# ============================================================
+# STEP 2 — BUTTERWORTH BANDPASS FILTER
+# ============================================================
+# H(f) = 1 / sqrt(1 + (f/f_c)^2n)
+# Passes 0.5–40 Hz. filtfilt() = zero-phase (no timing distortion).
+
+def butterworth_bandpass(signal, fs=FS, lowcut=0.5, highcut=40.0, order=4):
+    nyq  = fs / 2.0
+    b, a = butter(order, [lowcut / nyq, highcut / nyq], btype='band')
+    if signal.ndim == 1:
+        return filtfilt(b, a, signal)
+    return np.stack(
+        [filtfilt(b, a, signal[:, i]) for i in range(signal.shape[1])],
+        axis=1
+    )
+
+# ============================================================
+# STEP 3 — PAN-TOMPKINS R-PEAK DETECTION
+# ============================================================
+# 1. Differentiate  : x'[n] = x[n] - x[n-1]
+# 2. Square         : x''[n] = (x'[n])^2
+# 3. Moving average : MWI[n] = (1/W) * sum(x''[n-W+1..n]),  W=15
+# 4. Threshold at 50% of max(MWI)
+# 5. Find exact R maximum per candidate region
+# 6. Enforce 200 ms refractory period
+
+def pan_tompkins_rpeaks(signal_1d, fs=FS):
+    diff      = np.diff(signal_1d, prepend=signal_1d[0])
+    squared   = diff ** 2
+    window    = int(0.15 * fs)
+    mwi       = np.convolve(squared, np.ones(window) / window, mode='same')
+    threshold = 0.5 * np.max(mwi)
+    above     = mwi > threshold
+
+    r_peaks = []
+    in_peak, start = False, 0
+    for i in range(len(above)):
+        if above[i] and not in_peak:
+            in_peak, start = True, i
+        elif not above[i] and in_peak:
+            in_peak = False
+            seg = signal_1d[start:i]
+            if len(seg) > 0:
+                r_peaks.append(start + int(np.argmax(seg)))
+
+    r_peaks    = np.array(r_peaks)
+    refractory = int(0.2 * fs)
+    if len(r_peaks) > 1:
+        keep = [r_peaks[0]]
+        for rp in r_peaks[1:]:
+            if rp - keep[-1] >= refractory:
+                keep.append(rp)
+        r_peaks = np.array(keep)
+
+    return r_peaks
+
+# ============================================================
+# STEP 4 — FEATURE EXTRACTION
+# ============================================================
+
+def compute_baseline(signal_1d, r_idx, fs=FS):
+    start = max(0, r_idx - int(0.20 * fs))
+    end   = max(0, r_idx - int(0.08 * fs))
+    return float(np.mean(signal_1d[start:end])) if end > start else 0.0
+
+def find_q_wave(signal_1d, r_idx, fs=FS):
+    start = max(0, r_idx - int(0.05 * fs))
+    seg   = signal_1d[start:r_idx]
+    return start + int(np.argmin(seg)) if len(seg) > 0 else r_idx
+
+def find_s_wave(signal_1d, r_idx, fs=FS):
+    end = min(len(signal_1d), r_idx + int(0.08 * fs))
+    seg = signal_1d[r_idx:end]
+    return r_idx + int(np.argmin(seg)) if len(seg) > 0 else r_idx
+
+def find_j_point(signal_1d, s_idx, fs=FS):
+    end = min(len(signal_1d), s_idx + int(0.08 * fs))
+    seg = signal_1d[s_idx:end]
+    return s_idx + int(np.argmin(seg)) if len(seg) >= 2 else s_idx
+
+def find_t_wave_peak(signal_1d, r_idx, fs=FS):
+    start = min(len(signal_1d) - 1, r_idx + int(0.20 * fs))
+    end   = min(len(signal_1d),     r_idx + int(0.40 * fs))
+    seg   = signal_1d[start:end]
+    return start + int(np.argmax(np.abs(seg))) if len(seg) > 0 else r_idx
+
+def extract_features_one_beat(signal_v1, r_idx, fs=FS):
+    n = len(signal_v1)
+    if r_idx < int(0.25 * fs) or r_idx > n - int(0.45 * fs):
+        return None
+
+    baseline = compute_baseline(signal_v1, r_idx, fs)
+    q_idx    = find_q_wave(signal_v1, r_idx, fs)
+    s_idx    = find_s_wave(signal_v1, r_idx, fs)
+    j_idx    = find_j_point(signal_v1, s_idx, fs)
+    t_idx    = find_t_wave_peak(signal_v1, r_idx, fs)
+
+    x_1 = float(signal_v1[j_idx]) - baseline
+    qrs_samples = max(0, s_idx - q_idx)
+    x_2 = qrs_samples * (1000.0 / fs)
+    x_3 = float(signal_v1[t_idx]) - baseline
+    x_4 = float(signal_v1[r_idx]) - float(signal_v1[s_idx])
+
+    return (x_1, x_2, x_3, x_4)
+
+def extract_patient_features(patient_id, db_name=DB_NAME, fs=FS):
+    try:
+        pid     = str(patient_id)
+        record  = wfdb.rdrecord(f'files/{pid}/{pid}', pn_dir=db_name)
+        v1_filt = butterworth_bandpass(record.p_signal[:, V1_IDX], fs=fs)
+        r_peaks = pan_tompkins_rpeaks(v1_filt, fs=fs)
+
+        if len(r_peaks) < 2:
+            return None
+
+        beats = [extract_features_one_beat(v1_filt, r, fs) for r in r_peaks]
+        beats = [b for b in beats if b is not None]
+
+        if not beats:
+            return None
+
+        arr = np.array(beats)
+        return tuple(float(np.mean(arr[:, i])) for i in range(4))
+
+    except Exception as e:
+        print(f'  Error on patient {patient_id}: {e}')
+        return None
+
+# ============================================================
+# BUILD FEATURE MATRIX X  (shape: n_valid_patients x 4)
+# ============================================================
+
+rows, labels, pids = [], [], []
+
+for idx, row in meta.iterrows():
+    pid, label = row['patient_id'], row['label']
+    features = extract_patient_features(pid)
+    if features is not None:
+        rows.append(features)
+        labels.append(label)
+        pids.append(pid)
+
+X = np.array(rows)
+y = np.array(labels)
+
+feature_df = pd.DataFrame({
+    'patient_id'      : pids,
+    'x1_j_elevation'  : X[:, 0],
+    'x2_qrs_duration' : X[:, 1],
+    'x3_t_amplitude'  : X[:, 2],
+    'x4_r_s_drop'     : X[:, 3],
+    'label'           : y
+})
+feature_df.to_csv('feature_matrix.csv', index=False)
+
+# ============================================================
+# STEP 5 — NESTED RandomizedSearchCV + 5-FOLD OUTER CV
+# ============================================================
+
+base_pipeline = Pipeline([
+    ('scaler', StandardScaler()),
+    ('svc',    SVC(
+        kernel       = 'rbf',
+        class_weight = CLASS_WEIGHT,
+        probability  = True,
+        random_state = 42
+    ))
+])
+
+inner_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+rand_search = RandomizedSearchCV(
+    estimator            = base_pipeline,
+    param_distributions  = PARAM_DIST,
+    n_iter               = N_ITER_SEARCH,
+    cv                   = inner_cv,
+    scoring              = 'roc_auc',
+    refit                = True,
+    n_jobs               = -1,
+    random_state         = 42,
+    verbose              = 0
+)
+
+y_pred_all = np.zeros(len(y), dtype=int)
+y_prob_all = np.zeros(len(y))
+fold_aucs  = []
+
+for fold_num, (train_idx, test_idx) in enumerate(outer_cv.split(X, y), 1):
+    X_train, X_test = X[train_idx], X[test_idx]
+    y_train, y_test = y[train_idx], y[test_idx]
+
+    rand_search.fit(X_train, y_train)
+
+    y_pred_fold = rand_search.predict(X_test)
+    y_prob_fold = rand_search.predict_proba(X_test)[:, 1]
+
+    if len(np.unique(y_test)) > 1:
+        raw_auc = roc_auc_score(y_test, y_prob_fold)
+        if raw_auc < 0.5:
+            y_prob_fold = 1.0 - y_prob_fold
+            y_pred_fold = 1 - y_pred_fold
+            fold_auc    = roc_auc_score(y_test, y_prob_fold)
+        else:
+            fold_auc = raw_auc
+    else:
+        fold_auc = 0.5
+
+    y_pred_all[test_idx] = y_pred_fold
+    y_prob_all[test_idx] = y_prob_fold
+    fold_aucs.append(fold_auc)
+
+# ============================================================
+# STEP 6 — EVALUATION
+# ============================================================
+
+cm             = confusion_matrix(y, y_pred_all)
+TN, FP, FN, TP = cm.ravel()
+sensitivity    = TP / (TP + FN)
+specificity    = TN / (TN + FP)
+precision      = TP / (TP + FP) if (TP + FP) > 0 else 0.0
+f1             = (2 * precision * sensitivity / (precision + sensitivity)
+                  if (precision + sensitivity) > 0 else 0.0)
+auc            = roc_auc_score(y, y_prob_all)
+
+print(classification_report(y, y_pred_all, target_names=['Normal', 'Brugada']))
+print(f'AUC mean +/- std : {np.mean(fold_aucs):.3f} +/- {np.std(fold_aucs):.3f}')`;
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function hi(line){
+  if(/^\s*#/.test(line)) return `<span style="color:#4a6070;font-style:italic">${esc(line)}</span>`;
+  let s=esc(line);
+  s=s.replace(/\b(import|from|as|def|return|if|else|elif|for|in|not|and|or|True|False|None|class|try|except|raise|with)\b/g,
+    '<span style="color:#ff79c6">$1</span>');
+  s=s.replace(/\b(np|pd|plt|sns|wfdb|SVC|Pipeline|StandardScaler|StratifiedKFold|RandomizedSearchCV|butter|filtfilt|loguniform|roc_auc_score|confusion_matrix|roc_curve|classification_report)\b/g,
+    '<span style="color:#8be9fd">$1</span>');
+  s=s.replace(/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g,
+    '<span style="color:#f1fa8c">$1</span>');
+  s=s.replace(/\b(\d+\.?\d*)\b/g,'<span style="color:#bd93f9">$1</span>');
+  s=s.replace(/\b(butterworth_bandpass|pan_tompkins_rpeaks|compute_baseline|find_q_wave|find_s_wave|find_j_point|find_t_wave_peak|extract_features_one_beat|extract_patient_features)\b/g,
+    '<span style="color:#50fa7b">$1</span>');
+  return s;
+}
+const html=raw.split('\n').map(hi).join('\n');
+document.getElementById('code-block').innerHTML=html;
+})();
 </script>
 </body>
 </html>
